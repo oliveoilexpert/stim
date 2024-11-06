@@ -2,9 +2,9 @@ export default class Aspect {
     static attributes = {}
     static elements = []
     static aspects = {}
+    static token
     static registered(token, stim) {}
     static shouldRegister() { return true }
-
     __internal
     get el() { return this.__internal.host }
     get element() { return this.__internal.host }
@@ -35,8 +35,8 @@ export default class Aspect {
         return event
     }
 
-    initialized()  { return this }
-    connected() { return this }
-    disconnected() { return this }
+    initialized()  { }
+    connected() { }
+    disconnected() { }
     attributeChanged(name, oldValue, newValue) { }
 }

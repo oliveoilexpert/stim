@@ -72,7 +72,6 @@ export default class ElementEventHandler {
                     params[attrKey] = this.typecast(attr.value)
                 }
             }
-            e.handlerTarget = el
 
             aspect[aspectMethod](params, e)
         }
