@@ -3,8 +3,8 @@ import ElementConnection from "./ElementConnection"
 import config from "./Config"
 
 export default class Connector {
-    constructor(nexus) {
-        this.nexus = nexus
+    constructor(stim) {
+        this.stim = stim
     }
     connectedAspects = new Set()
     orphans = new Map()
@@ -19,7 +19,7 @@ export default class Connector {
         return config.attributePrefix + config.scopeAttribute
     }
     getConnectEls(el = document) {
-        return el.querySelectorAll(`[${config.attributePrefix}${config.connectAttribute}]${this.nexus.registry.customTagSelector}`)
+        return el.querySelectorAll(`[${config.attributePrefix}${config.connectAttribute}]${this.stim.registry.customTagSelector}`)
     }
     getHandlerEls(el = document) {
         return el.querySelectorAll(`[${config.attributePrefix}${config.handlerAttribute}]`)
@@ -80,11 +80,11 @@ export default class Connector {
             const el = mutation.target
             const newVal = el.getAttribute(mutation.attributeName)
             if (mutation.oldValue == newVal) return
-            if(mutation.attributeName == this.scopeAttr && el.nxs_tm_host) {
+            if(mutation.attributeName == this.scopeAttr && el.stim_tm_host) {
                 this.setHostScopeAttribute(el)
                 return
             }
-            el.nxs_tm_host?.forEach(aspect => {
+            el.stim_tm_host?.forEach(aspect => {
                 if (mutation.attributeName == `${config.attributePrefix}${aspect.token}:reconnect`) {
                     window.requestAnimationFrame(() => {
                         aspect.disconnected()
@@ -99,7 +99,7 @@ export default class Connector {
 
     connectNode(node) {
         if (node.nodeType !== Node.ELEMENT_NODE) return
-        for (let [selector, callback] of this.nexus.registry.selectorRegister.entries()) {
+        for (let [selector, callback] of this.stim.registry.selectorRegister.entries()) {
             if (node.matches(selector)) {
                 callback(node)
             }
@@ -126,13 +126,13 @@ export default class Connector {
 
     hostElAdded(el) {
         let tokens = this.filterHostTokens(el.getAttribute(this.connectAttr)?.split(' ') ?? [])
-        if (this.nexus.registry.customTags[el.tagName]) {
-            tokens.push(this.nexus.registry.customTags[el.tagName])
+        if (this.stim.registry.customTags[el.tagName]) {
+            tokens.push(this.stim.registry.customTags[el.tagName])
         }
         this.hostTokensAdded(el, tokens)
     }
     hostElRemoved(el) {
-        el.nxs_tm_host?.forEach(aspect => {
+        el.stim_tm_host?.forEach(aspect => {
             this.disconnectAspect(aspect)
         })
     }
@@ -142,7 +142,7 @@ export default class Connector {
         this.childTokensAdded(el, tokens)
     }
     childElRemoved(el) {
-        el.nxs_tm_child?.forEach(connection => {
+        el.stim_tm_child?.forEach(connection => {
             connection.disconnect()
         })
         this.removeOrphan(el)
@@ -152,21 +152,21 @@ export default class Connector {
         el.getAttribute(this.handlerAttr).split(' ').forEach(descriptor => {
             new ElementEventHandler(el, descriptor)
         })
-        el.nxs_tm_handler?.forEach(handler => {
+        el.stim_tm_handler?.forEach(handler => {
             handler.connect()
         })
     }
     handlerElRemoved(el) {
-        el.nxs_tm_handler?.forEach(handler => {
+        el.stim_tm_handler?.forEach(handler => {
             handler.disconnect()
         })
-        el.nxs_tm_handler = null
+        el.stim_tm_handler = null
     }
 
     childTokensAdded(el, tokens) {
         tokens?.forEach(token => {
-            if (el.nxs_tm_child?.get(token)?.connected) {
-                el.nxs_tm_child.get(token).disconnect()
+            if (el.stim_tm_child?.get(token)?.connected) {
+                el.stim_tm_child.get(token).disconnect()
             }
             const connection = new ElementConnection(el, token)
             if (!connection.aspect && connection.hostId) {
@@ -178,9 +178,9 @@ export default class Connector {
     }
     childTokensRemoved(el, tokens) {
         tokens?.forEach(token => {
-            const connection = el.nxs_tm_child?.get(token)
+            const connection = el.stim_tm_child?.get(token)
             connection?.disconnect()
-            el.nxs_tm_child?.delete(token)
+            el.stim_tm_child?.delete(token)
             if (connection.hostId) {
                 this.removeOrphan(el, connection.hostId, token)
             }
@@ -193,8 +193,8 @@ export default class Connector {
             this.injectAspect(el, token)
         })
         this.setHostScopeAttribute(el)
-        if (el.nxs_tm_host && config.observeAspectAttributes) this.aspectObserver.observe(el, {attributes: true, attributeOldValue: true})
-        el.nxs_tm_host?.forEach(aspect => {
+        if (el.stim_tm_host && config.observeAspectAttributes) this.aspectObserver.observe(el, {attributes: true, attributeOldValue: true})
+        el.stim_tm_host?.forEach(aspect => {
             if (!aspect || aspect.__internal.isConnected) return
             aspect.connected()
             aspect.__internal.isConnected = true
@@ -219,9 +219,9 @@ export default class Connector {
 
     hostTokensRemoved(el, tokens) {
         tokens?.forEach(token => {
-            const aspect = el.nxs_tm_host?.get(token)
+            const aspect = el.stim_tm_host?.get(token)
             this.disconnectAspect(aspect)
-            el.nxs_tm_host?.delete(token)
+            el.stim_tm_host?.delete(token)
         })
         this.setHostScopeAttribute(el)
     }
@@ -229,13 +229,13 @@ export default class Connector {
     disconnectAspect(aspect) {
         aspect.__internal.elements.forEach((set, key) => {
             set.forEach(el => {
-                el.nxs_tm_child.forEach((connection, token) => {
+                el.stim_tm_child.forEach((connection, token) => {
                     if (connection.aspect !== aspect) return
                     if (connection.hostId && connection.el.isConnected) {
                         this.addOrphan(el, connection.hostId, token)
                     }
                     connection.disconnect()
-                    el.nxs_tm_child.delete(token)
+                    el.stim_tm_child.delete(token)
                 })
             })
         })
@@ -245,19 +245,19 @@ export default class Connector {
     }
 
     injectAspect(el, token, attributes = {}) {
-        if (!this.nexus.registry.aspectRegister.has(token)) {
+        if (!this.stim.registry.aspectRegister.has(token)) {
             console.warn(`Aspect ${token} not found in register, skipping.`)
             return
         }
-        if (el.nxs_tm_host?.has(token)) return
-        Object.entries(this.nexus.registry.aspectRegister.get(token).aspects).forEach(([injectToken, injectAttributes]) => {
+        if (el.stim_tm_host?.has(token)) return
+        Object.entries(this.stim.registry.aspectRegister.get(token).aspects).forEach(([injectToken, injectAttributes]) => {
             this.injectAspect(el, injectToken, injectAttributes)
         })
-        new (this.nexus.registry.aspectRegister.get(token))(el, this.nexus, attributes)
+        new (this.stim.registry.aspectRegister.get(token))(el, this.stim, attributes)
     }
 
     setHostScopeAttribute(el, oldVal = '') {
-        let scopeString = [...el.nxs_tm_host.keys()].reduce((acc, token) => acc + `${token} `, ' ') ?? ''
+        let scopeString = [...el.stim_tm_host.keys()].reduce((acc, token) => acc + `${token} `, ' ') ?? ''
         if (oldVal == scopeString) return
         el.setAttribute(this.scopeAttr, scopeString)
     }

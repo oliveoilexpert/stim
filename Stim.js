@@ -25,10 +25,10 @@ class Stim {
         return this.connector.connectedAspects
     }
     getAspects(el) {
-        return el?.nxs_tm_host
+        return el?.stim_tm_host
     }
     getAspect(el, aspectName) {
-        return el?.nxs_tm_host?.get(aspectName)
+        return el?.stim_tm_host?.get(aspectName)
     }
 }
 

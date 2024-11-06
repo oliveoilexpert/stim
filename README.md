@@ -1,4 +1,4 @@
-# nexus
+# stim
 
 ### A modest stimulus knock-off
 
@@ -8,7 +8,7 @@ of [stimulus](https://github.com/hotwired/stimulus).
 ## What problem does it solve?
 
 When dynamically updating the DOM via AJAX / libraries like [HTMX](https://github.com/bigskysoftware/htmx) and [hotwired/turbo](https://github.com/hotwired/turbo), you often need to attach JavaScript behavior to the new elements that are added to the page.
-This is where nexus comes in. It allows you to
+This is where stim comes in. It allows you to
 define JavaScript classes that can be attached to elements via HTML attributes and gives you a structured way to define behaviors, similar to custom elements.
 
 ### Why not just use custom elements?
@@ -39,7 +39,7 @@ First we need to define some terms:
 
 Here are some differences:
 
-1. nexus is more lightweight, ~5kb instead of ~11kb minified
+1. stim is more lightweight, ~5kb instead of ~11kb minified
 2. handler and connected elements do not have to be descendants of the aspect element, connecting them "remotely" via id is possible
 3. aspects can inject other aspects they depend on and instantiate them on their host element, making it easier to avoid
    inheritance
@@ -74,14 +74,14 @@ export default class Dropdown extends Aspect {
 }
 ```
 
-### Register the aspect and start nexus
+### Register the aspect and start stim
 
 ```javascript
-import {nexus} from 'Stim';
+import {stim} from 'Stim';
 import Dropdown from './Dropdown';
 
-nexus.registerAspect('dropdown', Dropdown);
-nexus.connect();
+stim.registerAspect('dropdown', Dropdown);
+stim.connect();
 ```
 
 ### Attach the aspect to an element
@@ -349,11 +349,11 @@ An array of strings or object that defines the aspects that this aspect depends 
 
 #### `shouldRegister()`
 
-Called before the aspect is registered with `nexus.registerAspect()`. If the method returns false, the aspect is not registered.
+Called before the aspect is registered with `stim.registerAspect()`. If the method returns false, the aspect is not registered.
 
 #### `registered()`
 
-Called after the aspect is registered with `nexus.registerAspect()`.
+Called after the aspect is registered with `stim.registerAspect()`.
 
 <br>
 
@@ -410,11 +410,11 @@ Called when the property `[attributeName]` (and, because of syncing, the HTML at
 
 <br>
 
-### nexus
+### stim
 
 #### `registerAspect(aspectName, Aspect)`
 
-Register an aspect with nexus.
+Register an aspect with stim.
 
 #### `connect()`
 

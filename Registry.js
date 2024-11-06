@@ -8,7 +8,7 @@ export default class Registry {
     selectorRegister = new Map()
     customTagSelector = ''
     customTags = []
-    addAspect(token, constructor, nexus) {
+    addAspect(token, constructor, stim) {
         if (typeof token == 'object') {
             Object.entries(token).forEach(([key, value]) => {
                 this.addAspect(kebabCase(key), value)
@@ -18,7 +18,7 @@ export default class Registry {
         if (!constructor.shouldRegister()) return
         this.processAspect(token, constructor)
         this.aspectRegister.set(token, constructor)
-        constructor.registered(token, nexus)
+        constructor.registered(token, stim)
     }
     addCustomElement(token) {
         if (Array.isArray(token)) {
@@ -90,7 +90,7 @@ export default class Registry {
         for (let injectToken of Object.keys(constructor.aspects)) {
             Object.defineProperty(constructor.prototype, `${camelCase(injectToken)}Aspect`, {
                 get() {
-                    return this.el.nxs_tm_host.get(injectToken)
+                    return this.el.stim_tm_host.get(injectToken)
                 },
             })
         }

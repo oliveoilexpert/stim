@@ -42,7 +42,7 @@ export default class ElementEventHandler {
         this.token = kebabCase(`${aspectToken}.${aspectMethod}`)
         aspectMethod = camelCase(aspectMethod)
         this.event = event.split('.')[0]
-        if (el.nxs_tm_handler?.get(this.token)) {
+        if (el.stim_tm_handler?.get(this.token)) {
             console.log(`Handler ${this.token} already connected to ${el.id}`)
             return
         }
@@ -54,7 +54,7 @@ export default class ElementEventHandler {
                 ? document.getElementById(id)
                 : el.closest(`[${attr}="${aspectToken}"], [${attr}^="${aspectToken} "], [${attr}$=" ${aspectToken}"], [${attr}*=" ${aspectToken} "]`);
 
-            const aspect = aspectEl?.nxs_tm_host?.get(aspectToken)
+            const aspect = aspectEl?.stim_tm_host?.get(aspectToken)
             if (triggerGuard(e) || !aspect) return
             //if (!aspect.__connected) return
             if (typeof aspect[aspectMethod] !== 'function') return
@@ -77,8 +77,8 @@ export default class ElementEventHandler {
             aspect[aspectMethod](params, e)
         }
 
-        !el.nxs_tm_handler ? el.nxs_tm_handler = new Map() : null
-        el.nxs_tm_handler.set(this.token, this)
+        !el.stim_tm_handler ? el.stim_tm_handler = new Map() : null
+        el.stim_tm_handler.set(this.token, this)
     }
 
     completeDescriptor(el, descriptor) {

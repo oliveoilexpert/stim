@@ -16,9 +16,9 @@ export default class ElementConnection {
         this.aspectEl = hostId
             ? document.getElementById(hostId)
             : el.closest(`[${config.attributePrefix}${config.scopeAttribute}*=" ${aspectToken} "]`)
-        this.aspect = this.aspectEl?.nxs_tm_host?.get(aspectToken)
-        !el.nxs_tm_child ? el.nxs_tm_child = new Map() : null
-        el.nxs_tm_child.set(descriptor, this)
+        this.aspect = this.aspectEl?.stim_tm_host?.get(aspectToken)
+        !el.stim_tm_child ? el.stim_tm_child = new Map() : null
+        el.stim_tm_child.set(descriptor, this)
     }
 
     connect() {
