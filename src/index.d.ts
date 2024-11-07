@@ -9,11 +9,11 @@ type SelectorCallbackMap = {
 }
 
 type AspectDispatchOptions = {
-    target: HTMLElement,
-    detail: any,
-    prefix: string,
-    bubbles: boolean,
-    cancelable: boolean
+    target?: HTMLElement,
+    detail?: any,
+    prefix?: string,
+    bubbles?: boolean,
+    cancelable?: boolean
 }
 
 type Config = {
@@ -49,8 +49,8 @@ declare class Aspect {
     get element(): HTMLElement;
     get stim(): Stim;
     get token(): string;
-    constructor(host: HTMLElement, stim: Stim, attributes: object);
-    dispatch(type: string, options: AspectDispatchOptions): CustomEvent;
+    constructor(host: HTMLElement, stim: Stim, attributes?: object);
+    dispatch(type: string, options?: AspectDispatchOptions): CustomEvent;
     initialized(): any;
     connected(): any;
     disconnected(): any;
