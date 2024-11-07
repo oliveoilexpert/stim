@@ -17,9 +17,11 @@
   },
   "module": "dist/stim.js",
   "main": "dist/stim.umd.js",
+  "types": "dist/stim.d.ts",
   "files": [
     "dist/stim.js",
-    "dist/stim.umd.js"
+    "dist/stim.umd.js",
+    "dist/stim.d.ts"
   ],
   "scripts": {
     "build": "rollup -c",
