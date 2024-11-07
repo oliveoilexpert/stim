@@ -1,6 +1,6 @@
 {
   "name": "@oliveoilexpert/stim",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A modest stimulus knock-off",
   "repository": {
     "type": "git",
@@ -30,9 +30,7 @@
     "@rollup/plugin-node-resolve": "^15.3.0",
     "eslint": "^9.14.0",
     "rollup": "^2.79.2",
-    "rollup-plugin-terser": "^7.0.2"
-  },
-  "dependencies": {
+    "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-copy": "^3.5.0"
   }
 }
