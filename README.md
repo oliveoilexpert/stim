@@ -39,7 +39,7 @@ First we need to define some terms:
 
 Here are some differences:
 
-1. stim is more lightweight, ~5kb instead of ~11kb minified
+1. stim is more lightweight, ~4kb instead of ~11kb minified
 2. handler and connected elements do not have to be descendants of the aspect element, connecting them "remotely" via id is possible
 3. aspects can inject other aspects they depend on and instantiate them on their host element, making it easier to avoid
    inheritance
@@ -57,27 +57,27 @@ If you're familiar with stimulus, you'll feel right at home. If not, here's a qu
 ### Define an aspect
 
 ```javascript
-import {Aspect} from 'Stim';
+import {Aspect} from '@oliveoilexpert/stim';
 
 export default class Dropdown extends Aspect {
-    static attributes = {
-        open: false
-    }
+   static attributes = {
+      open: false
+   }
 
-    toggle() {
-        this.open = !this.open;
-    }
+   toggle() {
+      this.open = !this.open;
+   }
 
-    connected() {
-        this.element.addEventListener('click', () => this.toggle());
-    }
+   connected() {
+      this.element.addEventListener('click', () => this.toggle());
+   }
 }
 ```
 
 ### Register the aspect and start stim
 
 ```javascript
-import {stim} from 'Stim';
+import {stim} from '@oliveoilexpert/stim';
 import Dropdown from './Dropdown';
 
 stim.registerAspect('dropdown', Dropdown);

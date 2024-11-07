@@ -1,4 +1,5 @@
 import { terser } from "rollup-plugin-terser"
+import copy from 'rollup-plugin-copy'
 
 export default [
     {
@@ -16,6 +17,11 @@ export default [
         ],
         context: "window",
         plugins: [
+            copy({
+                targets: [
+                    { src: 'src/index.d.ts', dest: 'dist/', rename: 'stim.d.ts' },
+                ]
+            })
         ]
     },
     {
