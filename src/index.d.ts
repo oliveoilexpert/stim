@@ -36,7 +36,9 @@ declare class Stim {
     disconnect(): void
     get aspects(): Set<Aspect>
     getAspects(el: HTMLElement): Map<string, Aspect>
-    getAspect(el: HTMLElement, aspectName: string): Aspect
+    getAspect(el: HTMLElement, aspectToken: string): Aspect
+    connectNode(node: Node): void
+    disconnectNode(node: Node): void
 }
 declare const stim: Stim
 
@@ -45,6 +47,8 @@ declare class Aspect {
     static elements: Array<string>;
     static aspects: Array<string>|object;
     static token: string;
+    static registered(token: string, stim: Stim): any;
+    static shouldRegister(): boolean;
     get el(): HTMLElement;
     get element(): HTMLElement;
     get stim(): Stim;

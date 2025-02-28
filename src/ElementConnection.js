@@ -1,3 +1,4 @@
+import { camelCase } from "./Utils";
 import config from "./Config"
 
 export default class ElementConnection {
@@ -24,8 +25,9 @@ export default class ElementConnection {
     connect() {
         if (this.connected || !this.aspect) return
         this.aspect.__internal.elements.get(this.type)?.add(this.el)
-        if (typeof this.aspect[`${this.type}ElementConnected`] == 'function') {
-            this.aspect[`${this.type}ElementConnected`](this.el)
+        let camelCasedType = camelCase(this.type)
+        if (typeof this.aspect[`${camelCasedType}ElementConnected`] == 'function') {
+            this.aspect[`${camelCasedType}ElementConnected`](this.el)
         }
         this.connected = true
     }
@@ -33,8 +35,9 @@ export default class ElementConnection {
     disconnect() {
         if (!this.connected || !this.aspect) return
         this.aspect.__internal.elements.get(this.type)?.delete(this.el)
-        if (typeof this.aspect[`${this.type}ElementDisconnected`] == 'function') {
-            this.aspect[`${this.type}ElementDisconnected`](this.el)
+        let camelCasedType = camelCase(this.type)
+        if (typeof this.aspect[`${camelCasedType}ElementDisconnected`] == 'function') {
+            this.aspect[`${camelCasedType}ElementDisconnected`](this.el)
         }
         this.connected = false
     }

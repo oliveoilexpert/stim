@@ -75,15 +75,16 @@ export default class Registry {
                 }
             })
         }
-        for (let elementName of constructor.elements) {
-            Object.defineProperty(constructor.prototype, `${elementName}Elements`, {
+        for (let type of constructor.elements) {
+            let camelCasedType = camelCase(type)
+            Object.defineProperty(constructor.prototype, `${camelCasedType}Elements`, {
                 get() {
-                    return this.__internal.elements.get(elementName)
+                    return this.__internal.elements.get(type)
                 }
             })
-            Object.defineProperty(constructor.prototype, `${elementName}Element`, {
+            Object.defineProperty(constructor.prototype, `${camelCasedType}Element`, {
                 get() {
-                    return this.__internal.elements.get(elementName).values()?.next()?.value
+                    return this.__internal.elements.get(type).values()?.next()?.value
                 },
             })
         }

@@ -27,8 +27,14 @@ class Stim {
     getAspects(el) {
         return el?.stim_tm_host
     }
-    getAspect(el, aspectName) {
-        return el?.stim_tm_host?.get(aspectName)
+    getAspect(el, aspectToken) {
+        return el?.stim_tm_host?.get(aspectToken)
+    }
+    connectNode(node) {
+        this.connector.connectNode(node)
+    }
+    disconnectNode(node) {
+        this.connector.disconnectNode(node)
     }
 }
 

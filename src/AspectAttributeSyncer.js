@@ -79,6 +79,10 @@ export default class AspectAttributeSyncer {
     }
 
     attributeChanged(aspect, name, oldVal, newVal) {
+        if (name === (config.attributePrefix + this.token)) {
+            this.initializeAttributes(aspect)
+            return
+        }
         const attrKey = this.attrKeyMap[name]
         if (!attrKey) {
             aspect.attributeChanged(name, oldVal, newVal)

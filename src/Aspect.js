@@ -24,13 +24,14 @@ export default class Aspect {
 
     dispatch(type, {
         target = this.el,
-        detail = {},
         prefix = this.token,
-        bubbles = true,
-        cancelable = true
+        detail = {},
+        bubbles = false,
+        cancelable = false,
+        composed = false
     } = {}) {
         type = prefix ? `${prefix}:${type}` : type
-        const event = new CustomEvent(type, { detail, bubbles, cancelable })
+        const event = new CustomEvent(type, { detail, bubbles, cancelable, composed })
         target.dispatchEvent(event)
         return event
     }
