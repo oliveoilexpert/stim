@@ -29,6 +29,7 @@ type Config = {
 
 declare class Stim {
     config: Config;
+    refs: Map<any, any>;
     registerAspect(token: string|TokenAspectMap, constructor?: AspectConstructor): void
     registerCustomElement(token: string|Array<string>): void
     registerSelectorCallback(selector: string|SelectorCallbackMap, callback?: Function): void

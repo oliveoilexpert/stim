@@ -6,6 +6,7 @@ class Stim {
     config = config
     registry = new Registry()
     connector = new Connector(this)
+    refs = new Map()
     registerAspect(token, constructor) {
         this.registry.addAspect(token, constructor, this)
     }

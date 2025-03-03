@@ -1,4 +1,4 @@
-# Stim Concepts Guide
+# Stim Guide
 
 This guide provides a comprehensive explanation of Stim, taking you from the basics to advanced usage.
 
@@ -16,11 +16,11 @@ This guide provides a comprehensive explanation of Stim, taking you from the bas
   - [Lifecycle Methods](#lifecycle-methods)
   - [Connected Elements](#connected-elements)
   - [Handlers](#handlers)
-- [Intermediate Concepts](#intermediate-concepts)
-  - [Understanding Scope](#understanding-scope)
-  - [Multiple Aspects on One Element](#multiple-aspects-on-one-element)
+- [Aspect Relationships & Scope](#aspect-relationships--scope)
+  - [Scope and Remote Connections](#scope-and-remote-connections)
   - [Aspect Injection](#aspect-injection)
   - [Custom Events](#custom-events)
+  - [Aspect Communication Strategies](#aspect-communication-strategies)
 - [Configuration Options](#configuration-options)
 - [Stim Syntax Cheat Sheet](#stim-syntax-cheat-sheet)
 
@@ -39,7 +39,7 @@ Stim follows a simple pattern:
 
 1. You create **Aspects** (JavaScript classes)
 2. You declare which **HTML elements** use those aspects by adding `data-connect` attributes
-3. Stim looks for these attributes and instantiates the corresponding aspects on the elements
+3. Stim looks for these attributes on existing and dynamically added elements and instantiates the corresponding aspects
 
 ## Getting Started
 
@@ -87,6 +87,15 @@ Here's what this HTML does:
 - `data-dropdown.open="true"` changes the initial value of the `open` attribute
 
 > **📝 Naming Convention**: HTML attributes for aspects use the format `data-[aspect-token].[attribute-name]`. The attribute name in HTML uses kebab-case (like `my-attribute`) to match the camelCase JavaScript property (like `myAttribute`).
+
+One Element can use multiple aspects:
+
+```html
+<div data-connect="dropdown list-filter">
+  <!-- This element uses both the dropdown and list-filter aspects -->
+</div>
+```
+
 
 ### Registering Aspects
 
@@ -379,7 +388,7 @@ In the example above, the div:
 2. Is connected as a `toggle-button` to a `dropdown` aspect
 3. Is connected as an `option` to a `select` aspect
 
-### Dynamic Elements
+#### Dynamic Elements
 
 Connected elements work with dynamic content. If elements are added or removed after the aspect is connected, the appropriate callbacks are called automatically:
 
@@ -534,129 +543,70 @@ One element can have multiple handlers:
 
 This will call both the `toggle` method on the `dropdown` aspect and the `trackClick` method on the `analytics` aspect when the button is clicked.
 
-### Understanding Scope
+## Aspect Relationships & Scope
 
-By default, Stim looks for connected elements and handlers within the descendants of the aspect's host element.
+### Scope and Remote Connections
+
+By default, Stim only looks for connected elements and handlers within their host element's DOM subtree, creating a scope boundary.
+
+#### Default Scope Boundaries
+
+Each aspect has a default scope limited to its host element's descendants:
 
 ```html
 <!-- Default scope: Everything within this div -->
 <div data-connect="dropdown">
-  <!-- These are descendants, so they're in scope -->
+  <!-- These are in scope for dropdown -->
   <button data-handler="dropdown.toggle">Toggle</button>
   <ul data-connect="dropdown.menu">...</ul>
 </div>
 ```
 
-Elements outside this scope won't work by default:
+Elements outside this scope are not automatically accessible:
 
 ```html
-<!-- This button is NOT in scope for the dropdown -->
+<!-- NOT in scope for dropdown, will not connect to aspect -->
 <button data-handler="dropdown.toggle">Outside Toggle</button>
+<ul data-connect="dropdown.menu">...</ul>
 
 <div data-connect="dropdown">
   <!-- Content -->
 </div>
 ```
 
-### Remote Connections
-
-To connect outside the default scope, use IDs:
+When nesting aspects, each creates its own scope boundary:
 
 ```html
-<!-- Remote connection with ID -->
-<button data-handler="modal.show#my-modal">Show my modal</button>
-
-<!-- The target modal identified by its ID -->
-<div id="my-modal" data-connect="modal">
-  <!-- Content -->
+<div data-connect="dropdown">
+  <div data-connect="list-filter">
+    <!-- NOT in scope for dropdown -->
+    <button data-handler="dropdown.toggle">Inner Toggle</button>
+    <ul data-connect="dropdown.menu">...</ul>
+  </div>
 </div>
 ```
 
-### Aspect Communication Strategies
+#### Remote Connections
 
-#### Events
-
-```javascript
-export default class ProductConfigurator extends Aspect {
-  // dispatch an event when a product is created
-  productCreated(product) {
-    this.dispatch('created', {
-        detail: { product },
-        target: document.body, 
-      }
-    );
-  }
-}
-
-export default class Cart extends Aspect {
-  connected() {
-    // listen for the created event
-    document.body.addEventListener('product-configurator:created', (event) => {
-	this.addProduct(event.detail.product);
-    });
-  }
-}
-```
-
-#### Connected Elements
-```html
-<div data-connect="cart product-configurator.cart#configurator">
-  <!-- Content -->
-</div>
-
-<ul id="configurator" data-connect="product-configurator">
-  <!-- Content -->
-</ul>
-```
-
-```javascript
-export default class ProductConfigurator extends Aspect {
-  static elements = ['cart'];
-  
-  // get the cart aspect from the connected element
-  get connectedCartAspect() {
-    return this.stim.getAspect(this.cartElement, 'cart') 
-  }
-
-  productCreated(product) {
-    this.connectedCartAspect.addProduct(product);
-  }
-}
-```
-
-#### Global References
-
-```javascript
-export default class Cart extends Aspect {
-  // set a reference to this aspect on the stim instance
-  initialized() {
-    this.stim.myAppCart = this;
-  }
-}
-
-export default class ProductConfigurator extends Aspect {
-  // get the cart aspect from the global reference
-  get appCartAspect() {
-    return this.stim.myAppCart
-  }
-  
-  productCreated(product) {
-    this.appCartAspect.addProduct(product);
-  }
-}
-```
-
-### Multiple Aspects on One Element
-
-A key advantage of Stim is the ability to use multiple aspects on a single element:
+To connect elements across scope boundaries, use element IDs:
 
 ```html
-<div data-connect="dropdown tooltip sortable">
-  <!-- This element uses three different aspects -->
-</div>
+<!-- Remote connection using ID -->
+<button data-connect="modal.toggle-button#login-modal">Show Login</button>
+
+<!-- Target element with matching ID -->
+<div id="login-modal" data-connect="modal">...</div>
 ```
 
-Each aspect operates independently but on the same element. This lets you compose behaviors without complex inheritance.
+Remote connections also work for handler elements:
+
+```html
+<!-- Remote connection using ID -->
+<button data-handler="modal.show#login-modal">Show Login</button>
+
+<!-- Target element with matching ID -->
+<div id="login-modal" data-connect="modal">...</div>
+```
 
 ### Aspect Injection
 
@@ -670,14 +620,14 @@ export default class Select extends Aspect {
   // Note: Aspect tokens must use kebab-case
   static aspects = ['dropdown', 'form-field'];
   
-  connected() {
-    // Access the dropdown aspect
-    this.dropdownAspect.open = false;
-  }
+  static elements = ['option']
   
-  // Custom method using the injected aspect
-  openOptions() {
-    this.dropdownAspect.open = true;
+  optionElementConnected(option) {
+    option.addEventListener('click', (event) => {
+      // access injected aspects directly
+      this.formFieldAspect.value = option.value;
+      this.dropdownAspect.toggle({}, event);
+    });
   }
 }
 ```
@@ -693,6 +643,27 @@ When a `Select` aspect is instantiated, Stim will:
 
 This is powerful for building complex components from smaller, reusable parts.
 
+#### Injected Aspects in HTML
+
+Injected aspects' attributes, connected elements and handlers are set up just like they are for "normal" aspects:
+
+```html
+<!-- Select aspect with injected dropdown and form-field aspects -->
+<!-- data-form-field.validation and data-dropdown set attributes on the injected aspects -->
+<div data-connect="select" 
+     data-form-field.validation="..." 
+     data-dropdown='{ "open": true }'>
+  <!-- data-connect="form-field.input" declares a connected element of the injected form-field aspect -->
+  <input data-connect="form-field.input" type="hidden"/>
+  <!-- data-handler="dropdown.toggle" declares a handler of the injected dropdown aspect -->
+  <button data-handler="dropdown.toggle">Open Options</button>
+  <ul data-connect="dropdown.menu">
+    <li data-connect="select.option" value="1">Option 1</li>
+    <li data-connect="select.option" value="2">Option 2</li>
+  </ul>
+```
+
+
 #### Configuring Injected Aspects
 
 You can configure injected aspects by using an object instead of an array:
@@ -703,7 +674,7 @@ static aspects = {
     open: true,
   },
   'form-field': {
-    required: true,  
+    validation: { ... },  
   }
 };
 ```
@@ -747,6 +718,149 @@ this.dispatch(
   }
 );
 ```
+
+### Aspect Communication Strategies
+
+Aspects often need to communicate with each other in complex applications. Stim provides several patterns for this communication, each suited to different situations.
+
+#### Choosing the Right Communication Strategy
+
+| Strategy | Best For | 
+|----------|----------|
+| **Custom Events** | Loosely coupled components, application-wide notifications | 
+| **Connected Elements** | Parent-child or sibling relationships with direct references | 
+| **Stim References** | Global services, singletons | 
+| **Aspect Injection** | Composing functionality on the same element | 
+
+#### 1. Custom Events
+
+Custom events enable loose coupling between aspects through a publish-subscribe pattern:
+
+```javascript
+export default class ProductConfigurator extends Aspect {
+  // Dispatch a custom event when a product is created
+  productCreated(product) {
+    this.dispatch('created', {
+      detail: { product },
+      target: document
+    })
+  }
+}
+
+export default class Cart extends Aspect {
+  // Listen for the custom event
+  connected() {
+    document.addEventListener('product-configurator:created', this.handleProductCreation);
+  }
+  // Clean up when disconnected
+  disconnected() {
+    document.removeEventListener('product-configurator:created', this.handleProductCreation);
+  }
+  handleProductCreation(event) {
+    // Add the product to the cart
+  }
+}
+```
+
+**Best for**: Application-wide notifications, unrelated components that need to react to the same events
+
+#### 2. Connected Elements
+
+Directly reference other aspects through DOM connections:
+
+```html
+<div data-connect="parent-component">
+  <!-- Parent connects to a child component -->
+  <div data-connect="child-component" data-connect="parent-component.child">
+    <!-- Child component content -->
+  </div>
+</div>
+```
+
+```javascript
+export default class ParentComponent extends Aspect {
+  static elements = ['child'];
+  
+  childElementConnected(child) {
+    // Get the child-component aspect instance
+    const childAspect = this.stim.getAspect(child, 'child-component');
+    if (childAspect) {
+      // Do something with the child aspect
+      childAspect.doSomething();
+    }
+  }
+}
+```
+
+**Best for**: Parent-child relationships, tightly coupled components
+
+#### 3. Stim References
+
+Register aspects as global services accessible from anywhere:
+
+```javascript
+export default class Cart extends Aspect {
+  // Register the cart as a global reference during initialization
+  connected() {
+    this.stim.refs.set('cartAspect', this);
+  }
+  // Clean up when disconnected
+  disconnected() {
+    this.stim.refs.delete('cartAspect');
+  }
+  addProduct(product) {
+    // Add the product to the cart
+  }
+}
+
+export default class ProductConfigurator extends Aspect {
+  // Access the cart through the global reference
+  productCreated(product) {
+    const cartAspect = this.stim.refs.get('cartAspect');
+    if (cartAspect) {
+      cartAspect.addProduct(product);
+    }
+  }
+}
+```
+
+**Best for**: Global services like cart, authentication, or analytics
+
+#### 4. Aspect Injection
+
+Use aspect injection for composition and communication between aspects on the same element:
+
+```javascript
+export default class ComboBox extends Aspect {
+  static elements = ['option']
+  static aspects = ['dropdown', 'form-field'];
+
+  connected() {
+    // Access injected aspects directly
+    if (this.formFieldAspect.value) {
+      this.dropdownAspect.label = this.formFieldAspect.value;
+    }
+	 
+    // also possible: hook into injected aspects' callback methods
+    formFieldAspect.valueChanged = (oldValue, newValue) => {
+      // if defined, call the original valueChanged method
+      formFieldAspect.__proto__.valueChanged?.call(formFieldAspect, oldValue, newValue);
+      // additional logic
+      this.dropdownAspect.label = newValue;
+    };
+  }
+  
+
+  optionElementConnected(option) {
+    option.addEventListener('click', (event) => {
+      this.formFieldAspect.value = option.value;
+      this.dropdownAspect.toggle({}, event);
+    });
+  }
+}
+```
+
+**Best for**: Composing functionality from multiple aspects on the same element
 
 ## Configuration Options
 
@@ -828,10 +942,10 @@ stim.connect();
   
   ```javascript
   // Change the connect attribute name
-  stim.config.connectAttribute = 'controller';
+  stim.config.connectAttribute = 'is';
   ```
   
-  With this change, you would use `data-controller` instead of `data-connect` in your HTML.
+  With this change, you would use `data-is` instead of `data-connect` in your HTML.
 
 * ##### `handlerAttribute`
   
@@ -840,10 +954,10 @@ stim.connect();
   
   ```javascript
   // Change the handler attribute name
-  stim.config.handlerAttribute = 'action';
+  stim.config.handlerAttribute = 'trigger';
   ```
   
-  With this change, you would use `data-action` instead of `data-handler` in your HTML.
+  With this change, you would use `data-trigger` instead of `data-handler` in your HTML.
 
 * ##### `scopeAttribute`
   

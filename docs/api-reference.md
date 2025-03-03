@@ -19,10 +19,10 @@ The base class that all aspects extend from.
 : An object that defines the aspect's attributes and their default values.
 
 `static elements`
-: An array of strings that defines different types of elements that can be connected to this aspect.
+: An array of kebab-case strings that defines different types of elements that can be connected to this aspect.
 
 `static aspects`
-: An array of strings or an object that defines the aspects that this aspect will inject and instantiate.
+: An array of aspect token strings or an object that defines the aspects that this aspect will inject and instantiate.
 
 **Static Methods:**
 
@@ -41,7 +41,7 @@ The base class that all aspects extend from.
 : Reference to the stim instance.
 
 `token`
-: The token that instantiated the aspect (string in the `data-connect` attribute).
+: The token the aspect was registered with, usually the kebab-case class name.
 
 `[attributeName]`
 : Instance property synced with `data-[aspect-token].[attribute-name]` on the host element.
@@ -75,7 +75,7 @@ The base class that all aspects extend from.
 : Called when the property `[attributeName]` changes.
 
 `[elementType]ElementConnected(element)`
-: Called when an element with `data-connect="[aspect-token].[connected-element-type]"` is added to the DOM.
+: Called when an element with `data-connect="[aspect-token].[element-type]"` is added to the DOM.
 
 `[elementType]ElementDisconnected(element)`
 : Called when the connected element is removed from the DOM.
@@ -96,6 +96,9 @@ The global stim instance that manages aspects and configuration.
 
 `aspects`
 : A set of all connected aspects.
+
+`refs`
+: An empty map for storing references.
 
 **Methods:**
 

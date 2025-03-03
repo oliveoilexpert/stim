@@ -10,11 +10,8 @@ A lightweight, flexible alternative to [Stimulus](https://github.com/hotwired/st
 - [Quick Start](#quick-start)
 - [What Problem Does Stim Solve?](#what-problem-does-stim-solve)
 - [Key Features](#key-features)
-- [Basic Example](#basic-example)
-- [Core Concepts at a Glance](#core-concepts-at-a-glance)
+- [Aspect Example](#aspect-example)
 - [Documentation](#documentation)
-- [Browser Support](#browser-support)
-- [License](#license)
 
 ## Quick Start
 
@@ -59,9 +56,10 @@ Stim provides a structured way to define and connect JavaScript behaviors to HTM
 
 Especially when dynamically updating the DOM via AJAX or libraries like [HTMX](https://github.com/bigskysoftware/htmx) and [Turbo](https://github.com/hotwired/turbo), it's nice to have HTML elements that automatically adopt JavaScript behaviors, similar to how custom elements work.
 
-How it works:
-1. You create Aspects (JavaScript classes)
-2. You declare which HTML elements use those aspects by adding data attributes
+Stim follows a simple pattern:
+
+1. You create **Aspects** (JavaScript classes)
+2. You declare which **HTML elements** use those aspects by adding `data-connect` attributes
 3. Stim looks for these attributes on existing and dynamically added elements and instantiates the corresponding aspects
 
 ### Why Stim over Alternatives?
@@ -71,7 +69,10 @@ How it works:
 - An element can use multiple aspects rather than being limited to just one class
 - No conflicts with built-in properties or future HTML standards
 - Extending standard elements is possible with full browser support without the limitations of the `is` attribute
-- Additional features like connected elements and handlers 
+- Compose behaviors by injecting aspects into one another
+- Additional features like connected elements and handlers
+
+>Stim can be used supplementary to custom elements, adding reusable behaviors (like scroll reveal, conditional display etc.) to standard elements and custom elements that define the core functionality of a component.
 
 #### Compared to Stimulus
 
@@ -168,9 +169,5 @@ export default class Dropdown extends Aspect {
 
 ## Documentation
 
-- [**Concepts Guide**](./docs/concepts-guide.md): Detailed explanations of all core concepts
+- [**Guide**](./docs/guide.md): Detailed explanations of all core concepts
 - [**API Reference**](./docs/api-reference.md): Complete reference for all properties and methods
-
-## License
-
-MIT
