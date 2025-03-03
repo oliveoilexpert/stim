@@ -771,7 +771,7 @@ Directly reference other aspects through DOM connections:
 ```html
 <div data-connect="parent-component">
   <!-- Parent connects to a child component -->
-  <div data-connect="child-component" data-connect="parent-component.child">
+  <div data-connect="child-component parent-component.child">
     <!-- Child component content -->
   </div>
 </div>
