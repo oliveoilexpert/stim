@@ -844,7 +844,7 @@ export default class ComboBox extends Aspect {
     // also possible: hook into injected aspects' callback methods
     formFieldAspect.valueChanged = (oldValue, newValue) => {
       // if defined, call the original valueChanged method
-      formFieldAspect.__proto__.valueChanged?.call(formFieldAspect, oldValue, newValue);
+      Object.getPrototypeOf(formFieldAspect).valueChanged?.call(formFieldAspect, oldValue, newValue);
       // additional logic
       this.dropdownAspect.label = newValue;
     };
