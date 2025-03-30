@@ -263,10 +263,10 @@ These lifecycle methods help you properly set up and clean up your aspects.
 
 When an element with a `data-connect` attribute is found in the DOM, Stim follows this sequence:
 
-1. The aspect class is instantiated with the element as context
-2. Default attribute values from `static attributes` are applied
-3. Attributes from HTML are parsed and applied to the instance
-4. Any injected aspects are instantiated (we'll cover this later)
+1. Any injected aspects are instantiated first (we'll cover this later)
+2. The aspect class is instantiated with the element as context
+3. Default attribute values from `static attributes` are applied
+4. Attributes from HTML are parsed and applied to the instance
 5. The `initialized()` method is called
 6. The `connected()` method is called
 7. Connected elements are processed (we'll cover this next)

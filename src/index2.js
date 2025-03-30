@@ -1,101 +1,122 @@
 const kebabCase = str => str.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? "-" : "") + $.toLowerCase())
-const camelCase = str => str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+const camelCase = str => str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 
 const config = {
 	observeChildList: true,
 	observeAttributes: true,
-	observeAspectAttributes: true,
+	observeControllerAttributes: true,
 	attributePrefix: 'data-',
-	traitAttribute: 'trait',
-	refAttribute: 'ref',
-	handlerAttribute: 'handler',
-	scopeAttribute: 'scope',
-	customElementSuffix: 'element',
+	controllerAttribute: 'controller',
+	targetAttribute: 'target',
+	actionAttribute: 'action',
 }
 
 class PropSyncer {
-	props = {}
-	keys = {}
-	token = ''
-	get propsAttr() {
-		return `${config.attributePrefix}${this.token}`
-	}
-	constructor(props = {}, token = '') {
-		this.props = props
-		this.token = token
-		for (const key in this.props) {
-			const attr = kebabCase(key)
-			this.keys[key] = attr
-			this.keys[attr] = key
+	#props
+	#propsAttr
+	#keys = {}
+	constructor(props, token) {
+		this.#propsAttr = `${config.attributePrefix}${token}`
+		this.#props = props
+		for (const key in this.#props) {
+			this.#keys[key] = `${this.#propsAttr}.${kebabCase(key)}`
+			this.#keys[this.#keys[key]] = key
 		}
 	}
-	write(defaultVal, val) {
-		if (typeof defaultVal == 'string') return val
-		if (typeof defaultVal == 'boolean') return val ? '' : 'false'
+	#write(key, val) {
+		if (typeof this.#props[key] == 'string') return val
+		if (typeof this.#props[key] == 'boolean') return val ? '' : 'false'
 		try { return JSON.stringify(val) } catch { return val }
 	}
-	read(defaultVal, val) {
-		if (typeof defaultVal == 'string') return val
-		if (typeof defaultVal == 'boolean') return val !== '0' && val !== 'false'
+	#read(key, val) {
+		if (typeof this.#props[key] == 'string') return val
+		if (typeof this.#props[key] == 'boolean') return val !== '0' && val !== 'false'
 		try { return JSON.parse(val) } catch { return val }
 	}
 	init(object, element) {
-		const attrProps = JSON.parse(element.getAttribute(this.propsAttr) || '{}')
-		for (const key in this.props) {
-			const attr = this.keys[key]
-			const defaultVal = this.props[key]
-			if (element.hasAttribute(attr)) {
-				this.set(object, element, key, this.read(defaultVal, element.getAttribute(attr)), false)
+		const attrProps = JSON.parse(element.getAttribute(this.#propsAttr) || '{}')
+		for (const key in this.#props) {
+			if (element.hasAttribute(this.#keys[key])) {
+				this.set(object, element, key, this.#read(key, element.getAttribute(this.#keys[key])), false)
 			} else if (key in attrProps) {
 				this.set(object, element, key, attrProps[key], true)
 			} else {
-				this.set(object, element, key, defaultVal, false)
+				this.set(object, element, key, this.#props[key], false)
 			}
 		}
-		element.removeAttribute(this.propsAttr)
+		element.removeAttribute(this.#propsAttr)
 	}
 	set(object, element, key, val, sync = true) {
-		if (val === object[`#${key}`]) return
-		const oldVal = object[`#${key}`]
-		object[`#${key}`] = val
+		if (val === object[`_${key}`]) return
+		const oldVal = object[`_${key}`]
+		object[`_${key}`] = val
 		if (typeof object[`${key}PropChanged`] === 'function') {
 			object[`${key}PropChanged`](oldVal, val)
 		}
 		if (!sync) return
-		const defaultVal = this.props[key]
-		const writeVal = this.write(defaultVal, val)
-		const attr = this.keys[key]
-		if (val === defaultVal || (typeof defaultVal === 'object' && writeVal === this.write(defaultVal, defaultVal))) {
-			element.removeAttribute(attr)
+		const defaultVal = this.#props[key]
+		const writeVal = this.#write(key, val)
+		if (val === defaultVal || (typeof defaultVal === 'object' && writeVal === this.#write(key, defaultVal))) {
+			element.removeAttribute(this.#keys[key])
 			return
 		}
-		element.setAttribute(attr, writeVal)
+		element.setAttribute(this.#keys[key], writeVal)
 	}
-	attributeChanged(object, element, name, oldVal, newVal) {
-		if (name === config.propsAttr) {
+	attrChange(object, element, name, oldVal, newVal) {
+		if (name === this.#propsAttr) {
 			this.init(object, element)
 			return
 		}
-		const key = this.keys[name]
+		const key = this.#keys[name]
 		if (!key) {
 			object.attributeChanged(name, oldVal, newVal)
 			return
 		}
-		const defaultVal = this.props[key]
-		const newReadVal = (newVal === null || newVal === undefined) ? defaultVal : this.read(defaultVal, newVal)
+		const newReadVal = (newVal === null || newVal === undefined) ? this.#props[key] : this.#read(key, newVal)
 		this.set(object, element, key, newReadVal, false)
 	}
 }
 
 class Stim {
-	propSyncers = {}
-	orphans = new Map([['', new Set()]])
-	traits = new WeakMap()
-	refs = new WeakMap()
-	handlers = new WeakMap()
-	traitRegister = {}
-	selectorRegister = {}
-	observers = {
+	#controllerRegister = {}
+	#selectorRegister = {}
+	#injectTokens = {}
+	#syncers = {}
+	#controllers = new WeakMap()
+	#targets = new WeakMap()
+	#actions = new WeakMap()
+	#orphans = new Map()
+	get #controllerAttr() {
+		return config.attributePrefix + config.controllerAttribute
+	}
+	get #targetAttr() {
+		return config.attributePrefix + config.targetAttribute
+	}
+	get #actionAttr() {
+		return config.attributePrefix + config.actionAttribute
+	}
+	get config() {
+		return config
+	}
+	get controllerRegister() {
+		return this.#controllerRegister
+	}
+	get selectorRegister() {
+		return this.#selectorRegister
+	}
+	get syncers() {
+		return this.#syncers
+	}
+	get controllers() {
+		return this.#controllers
+	}
+	get targets() {
+		return this.#targets
+	}
+	get actions() {
+		return this.#actions
+	}
+	#observer = {
 		childList: new MutationObserver(mutations => {
 			mutations.forEach(mutation => {
 				mutation.removedNodes.forEach(node => {
@@ -109,288 +130,333 @@ class Stim {
 		attribute: new MutationObserver(mutations => {
 			mutations.forEach(mutation => {
 				const el = mutation.target
-				if (mutation.attributeName === this.traitAttr) {
-					this.updateTraits(el, el.getAttribute(this.traitAttr))
-					return
-				}
-				if (mutation.attributeName === this.refAttr) {
-					this.updateRefs(el, el.getAttribute(this.refAttr))
-					return
-				}
-				if (mutation.attributeName === this.handlerAttr) {
-					this.updateHandlers(el, el.getAttribute(this.handlerAttr))
+				const newVal = el.getAttribute(mutation.attributeName)
+				if (mutation.attributeName === this.#controllerAttr) {
+					el.querySelectorAll(`[${this.#targetAttr}]`).forEach(targetEl => {
+						this.#setTargets(targetEl, null)
+						queueMicrotask(() => this.#setTargets(targetEl, targetEl.getAttribute(this.#targetAttr)))
+					})
+					this.#setControllers(el, newVal)
+				} else if (mutation.attributeName === this.#targetAttr) {
+					this.#setTargets(el, newVal)
+				} else if (mutation.attributeName === this.#actionAttr) {
+					this.#setActions(el, newVal)
 				}
 			})
 		}),
-		trait: new MutationObserver(mutations => {
+		controller: new MutationObserver(mutations => {
 			mutations.forEach(mutation => {
 				if (!mutation.attributeName.startsWith(config.attributePrefix)) return
 				const el = mutation.target
 				const newVal = el.getAttribute(mutation.attributeName)
 				if (mutation.oldValue == newVal) return
-				this.traits.get(el)?.forEach(trait => {
-					this.propSyncers[trait.token].attributeChanged(trait, el, mutation.attributeName, mutation.oldValue, newVal)
-				})
+				for (const token in this.#controllers.get(el)) {
+					this.#syncers[token].attrChange(this.#controllers.get(el)[token], el, mutation.attributeName, mutation.oldValue, newVal)
+				}
 			})
 		})
 	}
-	get traitAttr() {
-		return config.attributePrefix + config.traitAttribute
-	}
-	get refAttr() {
-		return config.attributePrefix + config.refAttribute
-	}
-	get handlerAttr() {
-		return config.attributePrefix + config.handlerAttribute
-	}
 	connect() {
-		this.connectElement(document.documentElement)
 		if (config.observeChildList) {
-			this.observers.childList.observe(document.documentElement, { childList: true, subtree: true })
+			this.#observer.childList.observe(document.documentElement, { childList: true, subtree: true })
 		}
 		if (config.observeAttributes) {
-			this.observers.attribute.observe(document.documentElement, { attributes: true, attributeOldValue: true, attributeFilter: [this.traitAttr, this.refAttr, this.handlerAttr], subtree: true })
+			this.#observer.attribute.observe(document.documentElement, { attributes: true, attributeOldValue: true, attributeFilter: [this.#controllerAttr, this.#targetAttr, this.#actionAttr], subtree: true })
 		}
+		this.connectElement(document.documentElement)
 	}
 	disconnect() {
-		for (const observer of this.observers) {
-			observer.takeRecords()
+		for (const observer of this.#observer) {
 			observer.disconnect()
 		}
 		this.disconnectElement(document.documentElement)
 	}
+	clearMutationQueue() {
+		for (const observer of this.#observer) {
+			observer.takeRecords()
+		}
+	}
 	connectElement(el) {
 		if (el.nodeType !== Node.ELEMENT_NODE) return
-		for (let [selector, callback] of this.selectorRegister?.entries()) {
-			if (el.matches(selector)) {
-				callback(el)
-			}
-			el.querySelectorAll(selector).forEach(el => callback(el))
-		}
-		if (el.hasAttribute(this.traitAttr)) this.updateTraits(el, el.getAttribute(this.traitAttr))
-		el.querySelectorAll(`[${this.traitAttr}]`).forEach(target => this.updateTraits(target, target.getAttribute(this.traitAttr)))
-		if (el.hasAttribute(this.refAttr)) this.updateRefs(el, el.getAttribute(this.refAttr))
-		el.querySelectorAll(`[${this.refAttr}]`).forEach(target => this.updateRefs(target, target.getAttribute(this.refAttr)))
-		if (el.hasAttribute(this.handlerAttr)) this.updateHandlers(el, el.getAttribute(this.handlerAttr))
-		el.querySelectorAll(`[${this.handlerAttr}]`).forEach(target => this.updateHandlers(target, target.getAttribute(this.handlerAttr)))
+		const selectors = Object.keys(this.#selectorRegister)
+		const combinedSelector = selectors.join(',')
+		;[el, ...el.querySelectorAll(combinedSelector)].forEach(element => {
+			selectors.forEach(selector => {
+				if (element.matches(selector)) {
+					this.#selectorRegister[selector](element)
+				}
+			})
+		})
+		this.#updateSubtreeConnections(el)
 	}
 	disconnectElement(el) {
 		if (el.nodeType !== Node.ELEMENT_NODE) return
-		if (el.hasAttribute(this.traitAttr)) this.updateTraits(el)
-		el.querySelectorAll(`[${this.traitAttr}]`).forEach(target => this.updateTraits(target))
-		if (el.hasAttribute(this.refAttr)) this.updateRefs(el)
-		el.querySelectorAll(`[${this.refAttr}]`).forEach(target => this.updateRefs(target))
-		if (el.hasAttribute(this.handlerAttr)) this.updateHandlers(el)
-		el.querySelectorAll(`[${this.handlerAttr}]`).forEach(target => this.updateHandlers(target))
+		this.#updateSubtreeConnections(el, true)
 	}
-	updateTraits(el, tokens = '') {
-		const traits = this.traits.get(el) ?? {}
-		const tokenSet = new Set(tokens.split(' '))
-		for (const token in traits) {
-			if (!tokenSet.has(token)) {
-				this.disconnectTrait(traits[token])
-			}
-		}
-		for (const token of tokenSet) {
-			if (!traits[token]) {
-				this.connectTrait(el, new this.traitRegister[token](el))
-			}
-		}
+	getController(el, identifier) {
+		return this.#controllers.get(el)?.[identifier] || null
 	}
-	updateRefs(el, descriptors = '') {
-		const refs = this.refs.get(el) ?? {}
-		const descriptorSet = new Set(descriptors.split(' '))
-		for (const descriptor in refs) {
+	#updateSubtreeConnections(rootEl, removeAll = false) {
+		// const els = [rootEl, ...rootEl.querySelectorAll(`[${this.#controllerAttr}],[${this.#targetAttr}],[${this.#actionAttr}]`)]
+		const actionEls = [], targetEls = [], controllerEls = []
+		;[rootEl, ...rootEl.querySelectorAll(`[${this.#controllerAttr}],[${this.#targetAttr}],[${this.#actionAttr}]`)].forEach(el => {
+			el.hasAttribute(this.#controllerAttr) && controllerEls.push(el)
+			el.hasAttribute(this.#targetAttr) && targetEls.push(el)
+			el.hasAttribute(this.#actionAttr) && actionEls.push(el)
+		})
+		controllerEls.forEach(el => this.#setControllers(el, removeAll ? null : el.getAttribute(this.#controllerAttr)))
+		targetEls.forEach(el => this.#setTargets(el, removeAll ? null : el.getAttribute(this.#targetAttr)))
+		actionEls.forEach(el => this.#setActions(el, removeAll ? null : el.getAttribute(this.#actionAttr)))
+	}
+	#setControllers(el, tokens) {
+		const controllers = this.#controllers.get(el) ?? {}
+		const addTokens = new Set(tokens?.split(' ').flatMap(token => this.#injectTokens[token] ?? []))
+		const removeTokens = new Set(Object.keys(controllers))
+		addTokens.forEach(propToken => {
+			const token = propToken.split('/')[0]
+			removeTokens.delete(token)
+			this.#addController(el, propToken)
+		})
+		removeTokens.forEach(token => this.#removeController(controllers[token]))
+	}
+	#addController(el, propToken) {
+		if (!this.#controllers.get(el)) this.#controllers.set(el, {})
+		const [token, injectorToken] = propToken.split('/')
+		let controller = this.#controllers.get(el)[token]
+		if (!controller) {
+			controller = this.#controllers.get(el)[token] = new this.#controllerRegister[token](el, propToken)
+			if (!this.#syncers[propToken]) {
+				this.#syncers[propToken] = new PropSyncer(
+					{...this.#controllerRegister[token].props, ...this.#controllerRegister[injectorToken]?.injects[token] ?? {}},
+					token
+				)
+			}
+			this.#syncers[propToken].init(controller, el)
+			controller.initialized()
+		}
+		if (config.observeControllerAttributes) this.#observer.controller.observe(el, {attributes: true, attributeOldValue: true})
+		this.#connectInstance(controller, () => {
+			controller.connected()
+			if (el.id && this.#orphans.has(el.id)) {
+				this.#orphans.get(el.id).forEach(target => {
+					if (target.token == token) {
+						this.#addTarget(target)
+					}
+				})
+			}
+			// for (const target of this.#orphans.get('')) {
+			// 	if (target.token == token && el.contains(target.el)) {
+			// 		this.#addTarget(target)
+			// 	}
+			// }
+			return true
+		})
+	}
+	#removeController(controller) {
+		this.#disconnectInstance(controller, () => {
+			controller.disconnected()
+			for (const type in controller.$targets) {
+				controller.$targets[type].forEach(target => this.#removeTarget(target, true))
+				// for (const target of controller.$targets[type]) {
+				// 	this.#removeTarget(target, true)
+				// }
+			}
+		})
+	}
+	#setTargets(el, descriptors = null) {
+		const targets = this.#targets.get(el) ?? {}
+		const descriptorSet = new Set(descriptors?.split(' '))
+		for (const descriptor in targets) {
 			if (!descriptorSet.has(descriptor)) {
-				this.disconnectRef(refs[descriptor])
+				this.#removeTarget(targets[descriptor])
 			}
 		}
-		for (const descriptor of descriptorSet) {
-			if (!refs[descriptor]) {
-				this.connectRef(new TraitRef(el, descriptor))
-			}
-		}
+		descriptorSet.forEach(descriptor => {
+			this.#addTarget(this.#targets.get(el)?.[descriptor] || new ControllerTarget(el, descriptor))
+		})
 	}
-	updateHandlers(el, descriptors = '') {
-		const handlers = this.handlers.get(el) ?? {}
-		const descriptorSet = new Set(descriptors.split(' '))
-		for (const descriptor in handlers) {
+	#addTarget(target) {
+		this.#connectInstance(target, () => {
+			const host = target.hostId ? document.getElementById(target.hostId) : target.el.closest(`[${this.#controllerAttr}]`)
+			target.controller = this.#controllers.get(host)?.[target.token]
+			if (!target.controller?.$connected) {
+				this.#addOrphan(target)
+				return false
+			}
+			this.#removeOrphan(target)
+			target.controller.$targets[target.type].add(target.el)
+			if (!this.#targets.get(target.el)) this.#targets.set(target.el, {})
+			this.#targets.get(target.el)[target.descriptor] = target
+			const callbackName = `${camelCase(target.type)}TargetConnected`
+			if (typeof target.controller[callbackName] == 'function') {
+				target.controller[callbackName](target.el)
+			}
+			return true
+		})
+	}
+	#removeTarget(target, addOrphan = false) {
+		this.#disconnectInstance(target, () => {
+			addOrphan ? this.#addOrphan(target) : this.#removeOrphan(target)
+			target.controller.$targets[target.type].delete(target.el)
+			const callbackName = `${camelCase(target.type)}TargetDisconnected`
+			if (typeof target.controller[callbackName] == 'function') {
+				target.controller[callbackName](target.el)
+			}
+		})
+	}
+	#setActions(el, descriptors = null) {
+		const actions = this.#actions.get(el) ?? {}
+		const descriptorSet = new Set(descriptors?.split(' '))
+		for (const descriptor in actions) {
 			if (!descriptorSet.has(descriptor)) {
-				this.disconnectHandler(handlers[descriptor])
+				this.#removeAction(actions[descriptor])
 			}
 		}
-		for (const descriptor of descriptorSet) {
-			if (!handlers[descriptor]) {
-				this.connectHandler(new TraitHandler(el, descriptor))
-			}
-		}
+		descriptorSet.forEach(descriptor => {
+			this.#addAction(this.#actions.get(el)?.[descriptor] || new ControllerAction(el, descriptor))
+		})
 	}
-	connectTrait(el, trait) {
-		if (!this.traits.get(el)) this.traits.set(el, {})
-		this.traits.get(el)[trait.token] = trait
-		this.observers.trait.observe(el, {attributes: true, attributeOldValue: true})
-		trait.connected()
-		if (el.id && this.orphans.has(el.id)) {
-			for (const ref of this.orphans.get(el.id)) {
-				if (ref.token == trait.token) {
-					this.connectRef(ref)
+	#addAction(action) {
+		this.#connectInstance(action, () => {
+			action.listener = event => {
+				const host = action.hostId ? document.getElementById(action.hostId) : action.el.closest(`[${this.#controllerAttr}]`)
+				const controller = this.#controllers.get(host)?.[action.token]
+				if (!controller?.$connected) return
+				if (action.options.prevent) event.preventDefault()
+				if (action.options.stop) event.stopPropagation()
+				const paramAttr = `${config.attributePrefix + action.token}.${action.method}`
+				const params = JSON.parse(action.el.getAttribute(paramAttr) || '{}')
+				for (const attr of action.el.attributes) {
+					if (attr.name.startsWith(`${paramAttr}.`)) {
+						params[camelCase(attr.name.replace(`${paramAttr}.`, ''))] = JSON.parse(attr.value)
+					}
 				}
+				controller[camelCase(action.method)]?.(params, event)
+			}
+			if (!this.#actions.get(action.el)) this.#actions.set(action.el, {})
+			this.#actions.get(action.el)[action.descriptor] = action
+			action.el.addEventListener(action.event, action.listener, action.options)
+			return true
+		})
+	}
+	#removeAction(action) {
+		this.#disconnectInstance(action, () => action.el.removeEventListener(action.event, action.listener, action.options))
+	}
+	#connectInstance(instance, callback) {
+		instance.$connecting = true
+		queueMicrotask(() => {
+			if (instance.$connected || !instance.$connecting) return
+			instance.$connecting = false
+			instance.$connected = callback()
+		})
+	}
+	#disconnectInstance(instance, callback) {
+		instance.$connecting = false
+		if (!instance.$connected) return
+		instance.$connected = false
+		callback()
+	}
+	#addOrphan(target) {
+		// if (!target.hostId) {
+		// 	this.#orphans.get('').add(target)
+		// 	return
+		// }
+		if (target.hostId) {
+			if (!this.#orphans.has(target.hostId)) {
+				this.#orphans.set(target.hostId, new Set())
+			}
+			this.#orphans.get(target.hostId).add(target)
+		}
+	}
+	#removeOrphan(target) {
+		if (target.hostId) {
+			this.#orphans.get(target.hostId)?.delete(target)
+			if (this.#orphans.get(target.hostId)?.size == 0) {
+				this.#orphans.delete(target.hostId)
 			}
 		}
-		for (const ref of this.orphans.get('')) {
-			if (el.contains(ref) && ref.token == trait.token) {
-				this.connectRef(ref)
-			}
-		}
+		// else {
+		// 	this.#orphans.get('').delete(target)
+		// }
 	}
-	disconnectTrait(trait) {
-		trait.disconnected()
-		for (const type in trait.$refs) {
-			for (const ref of trait.$refs[type]) {
-				this.disconnectRef(ref, true)
-			}
-		}
-		delete this.traits.get(trait.$el)?.[trait.token]
-	}
-	connectRef(ref) {
-		if (ref.trait) {
-			return
-		}
-		const target = ref.targetId ? document.getElementById(ref.targetId) : ref.el.closest(`[${config.traitAttr}]`)
-		ref.trait = this.traits.get(target)?.[ref.token]
-		if (!ref.trait) {
-			ref.trait = null
-			this.addOrphan(ref)
-			return
-		}
-		this.removeOrphan(ref)
-		ref.trait.$refs[ref.type].add(ref.el)
-		if (!this.refs.get(ref.el)) this.refs.set(ref.el, {})
-		this.refs.get(ref.el)[ref.descriptor] = ref
-		const callbackName = `${camelCase(ref.type)}RefConnected`
-		if (typeof ref.trait[callbackName] == 'function') {
-			ref.trait[callbackName](ref.el)
-		}
-	}
-	disconnectRef(ref, addOrphan = false) {
-		if (!addOrphan) this.removeOrphan(ref)
-		if (!ref.trait) {
-			return
-		}
-		if (addOrphan) this.addOrphan(ref)
-		ref.trait.$refs[ref.type].delete(ref.el)
-		delete this.refs.get(ref.el)[ref.descriptor]
-		const callbackName = `${camelCase(ref.type)}RefDisconnected`
-		if (typeof ref.trait[callbackName] == 'function') {
-			ref.trait[callbackName](ref.el)
-		}
-		ref.trait = null
-	}
-	connectHandler(handler) {
-		if (handler.listener) {
-			return
-		}
-		handler.listener = event => {
-			const target = handler.targetId ? document.getElementById(handler.targetId) : handler.el.closest(`[${config.traitAttr}]`)
-			const trait = this.traits.get(target)?.[handler.token]
-			if (!trait) return
-			if (handler.options.prevent) event.preventDefault()
-			if (handler.options.stop) event.stopPropagation()
-			const paramAttr = `${this.config.attributePrefix + handler.token}.${handler.method}`
-			const params = JSON.parse(handler.el.getAttribute(paramAttr) || '{}')
-			for (const attr of handler.el.attributes) {
-				if (attr.name.startsWith(paramAttr + '.')) {
-					params[camelCase(attr.name.replace(paramAttr + '.', ''))] = JSON.parse(attr.value)
-				}
-			}
-			trait[camelCase(handler.method)]?.(params, event)
-		}
-		if (!this.handlers.get(handler.el)) this.handlers.set(handler.el, {})
-		this.handlers.get(handler.el)[handler.descriptor] = handler
-		handler.el.addEventListener(handler.event, handler.listener, handler.options)
-	}
-	disconnectHandler(handler) {
-		if (!handler.listener) {
-			return
-		}
-		handler.el.removeEventListener(handler.event, handler.listener, handler.options)
-		delete this.handlers.get(handler.el)[handler.descriptor]
-		handler.listener = null
-	}
-	addOrphan(ref) {
-		if (!ref.targetId) {
-			this.orphans.get('').add(ref)
-			return
-		}
-		if (!this.orphans.has(ref.targetId)) {
-			this.orphans.set(ref.targetId, new Set())
-		}
-		this.orphans.get(ref.targetId).add(ref)
-	}
-	removeOrphan(ref) {
-		if (ref.targetId) {
-			this.orphans.get(ref.targetId)?.delete(ref)
-			if (this.orphans.get(ref.targetId)?.size == 0) {
-				this.orphans.delete(ref.targetId)
-			}
-		} else {
-			this.orphans.get('').delete(ref)
-		}
-	}
-	registerTrait(token, traitClass) {
+	registerController(token, controllerClass) {
 		if (typeof token === 'object') {
-			for (const [key, value] of Object.entries(token)) {
-				this.registerTrait(kebabCase(key), value)
+			for (const key in token) {
+				this.registerController(kebabCase(key), token[key])
 			}
 			return
 		}
 		const self = this
-		traitClass.token = token
-		if (traitClass.props) this.propSyncers[token] = new PropSyncer(traitClass.props, token)
-		for (const key in traitClass.props) {
-			Object.defineProperty(traitClass.prototype, key, {
+		controllerClass.token = token
+		for (const key in controllerClass.props) {
+			Object.defineProperty(controllerClass.prototype, key, {
 				get() {
-					return this[`#${key}`]
+					return this[`_${key}`]
 				},
 				set(val) {
-					self.propSyncers[token].set(this, this.$el, key, val, true)
+					self.syncers[this.$proptoken].set(this, this.$el, key, val, true)
 				}
 			})
 		}
-		for (const type of traitClass.refs) {
-			const camelCasedToken = camelCase(type)
-			traitClass.prototype.$refs[type] = new Set()
-			Object.defineProperty(traitClass.prototype, `${camelCasedToken}Refs`, {
+		Object.defineProperty(controllerClass.prototype, '$targets', {
+			value: Object.fromEntries(controllerClass.targets.map(key => [key, new Set()]))
+		})
+		for (const type of controllerClass.targets) {
+			const camelCasedType = camelCase(type)
+			Object.defineProperty(controllerClass.prototype, `${camelCasedType}Targets`, {
 				get() {
-					return this.$refs[type] ?? []
+					return this.$targets[type] ?? []
 				},
 			})
-			Object.defineProperty(traitClass.prototype, `${camelCasedToken}Ref`, {
+			Object.defineProperty(controllerClass.prototype, `${camelCasedType}Target`, {
 				get() {
-					return this.$refs[type]?.values()?.next()?.value
+					return this.$targets[type]?.values()?.next()?.value
 				},
 			})
 		}
-		this.traitRegister[token] = traitClass
+		this.#injectTokens[token] = [token]
+		for (const injectToken in controllerClass.injects) {
+			Object.defineProperty(controllerClass.prototype, `${camelCase(injectToken)}Inject`, {
+				get() {
+					return self.getController(this.$el, injectToken)
+				},
+			})
+			this.#injectTokens[token].push(`${injectToken}/${token}`)
+		}
+		this.#controllerRegister[token] = controllerClass
+		controllerClass.registered(token, this)
+	}
+	registerSelectorCallback(selector, callback) {
+		if (typeof selector === 'object') {
+			for (const key in selector) {
+				this.registerSelectorCallback(key, selector[key])
+			}
+			return
+		}
+		this.#selectorRegister[selector] = callback
 	}
 }
 
 const stim = new Stim()
 
-class TraitHandler {
-	el
-	descriptor
-	token
-	method
-	event
-	options
-	targetId
+const defaultEvents = {
+	'FORM': 'submit',
+	'INPUT': 'input',
+	'TEXTAREA': 'input',
+	'SELECT': 'change',
+	'DETAILS': 'toggle',
+}
+
+class ControllerAction {
+	options = {}
 	constructor(el, descriptor) {
+		this.descriptor = descriptor
 		if (!descriptor.includes('->')) {
-			descriptor = `click->${descriptor}`
+			descriptor = `${defaultEvents[el.tagName] ?? 'click'}->${descriptor}`
 		}
 		let eventDescriptor, optionDescriptor
-		[this.el, this.descriptor, eventDescriptor, this.token, this.method, this.targetId] = [el, descriptor, ...descriptor.split(/->|\.|#/)]
+		;[this.el, eventDescriptor, this.token, this.method] = [el, ...descriptor.split(/->|\.|#/, 3)]
+		this.hostId = descriptor.includes('#') ? descriptor.slice(descriptor.lastIndexOf('#') + 1) : ''
 		;[this.event, optionDescriptor] = eventDescriptor.split('[')
 		if (optionDescriptor) {
 			optionDescriptor.replace(']', '').split(' ').forEach(option => {
@@ -405,43 +471,42 @@ class TraitHandler {
 	}
 }
 
-class TraitRef {
-	el
-	descriptor
-	trait
-	token
-	type
-	targetId
+class ControllerTarget {
 	constructor(el, descriptor) {
-		[this.el, this.descriptor, this.token, this.type, this.targetId] = [el, descriptor, ...descriptor.split(/[.#]/)]
+		[this.el, this.descriptor, this.token, this.type] = [el, descriptor, ...descriptor.split(/[.#]/, 2)]
+		this.hostId = descriptor.includes('#') ? descriptor.slice(descriptor.lastIndexOf('#') + 1) : ''
 	}
 }
 
-class ElementTrait {
+class Controller {
 	static token = ''
 	static props = {}
-	static refs = []
-	$el
-	$refs
-	constructor(el) {
-		this.$el = el
-		stim.propSyncers[this.token]?.init(this)
-		this.initialized()
-	}
-	get token() {
+	static targets = []
+	static injects = {}
+	static registered(identifier, stim) {}
+	get identifier() {
 		return this.constructor.token
+	}
+	get element() {
+		return this.$el
 	}
 	get stim() {
 		return stim
 	}
-	get el() {
-		return this.$el
+	constructor(el, propToken) {
+		this.$el = el
+		this.$proptoken = propToken
 	}
 	initialized() {}
 	connected() {}
 	disconnected() {}
-	attributeChanges(name, oldValue, newValue) {}
+	attributeChanged(name, oldValue, newValue) {}
+	dispatch(type, options = {}) {
+		const prefix = options.prefix ?? this.identifier
+		const event = new CustomEvent(prefix ? `${prefix}:${type}` : type, options)
+		;(options.target ?? this.$el).dispatchEvent(event)
+		return event
+	}
 }
 
-// todo: targetAttributeChangedCallback() with static observedTargetAttributes
-//export { stim, ElementTrait }
+export { stim, Controller }
