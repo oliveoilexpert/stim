@@ -146,7 +146,6 @@ class Stim {
 		}),
 		controller: new MutationObserver(mutations => {
 			mutations.forEach(mutation => {
-				if (!mutation.attributeName.startsWith(config.attributePrefix)) return
 				const el = mutation.target
 				const newVal = el.getAttribute(mutation.attributeName)
 				if (mutation.oldValue == newVal) return
@@ -197,7 +196,6 @@ class Stim {
 		return this.#controllers.get(el)?.[identifier] || null
 	}
 	#updateSubtreeConnections(rootEl, disconnect = false) {
-		// const els = [rootEl, ...rootEl.querySelectorAll(`[${this.#controllerAttr}],[${this.#targetAttr}],[${this.#actionAttr}]`)]
 		const actionEls = [], targetEls = [], controllerEls = []
 		;[rootEl, ...rootEl.querySelectorAll(`[${this.#controllerAttr}],[${this.#targetAttr}],[${this.#actionAttr}]`)].forEach(el => {
 			if (disconnect != Boolean(el.__stim_connected)) return
@@ -246,11 +244,6 @@ class Stim {
 					}
 				})
 			}
-			// for (const target of this.#orphans.get('')) {
-			// 	if (target.token == token && el.contains(target.el)) {
-			// 		this.#addTarget(target)
-			// 	}
-			// }
 			return true
 		})
 	}
@@ -356,10 +349,6 @@ class Stim {
 		callback()
 	}
 	#addOrphan(target) {
-		// if (!target.hostId) {
-		// 	this.#orphans.get('').add(target)
-		// 	return
-		// }
 		if (target.hostId) {
 			if (!this.#orphans.has(target.hostId)) {
 				this.#orphans.set(target.hostId, new Set())
@@ -374,9 +363,6 @@ class Stim {
 				this.#orphans.delete(target.hostId)
 			}
 		}
-		// else {
-		// 	this.#orphans.get('').delete(target)
-		// }
 	}
 	registerController(token, controllerClass) {
 		if (typeof token === 'object') {
@@ -397,9 +383,6 @@ class Stim {
 				}
 			})
 		}
-		Object.defineProperty(controllerClass.prototype, '$targets', {
-			value: Object.fromEntries(controllerClass.targets.map(key => [key, new Set()]))
-		})
 		for (const type of controllerClass.targets) {
 			const camelCasedType = camelCase(type)
 			Object.defineProperty(controllerClass.prototype, `${camelCasedType}Targets`, {
@@ -495,6 +478,7 @@ class Controller {
 	constructor(el, propToken) {
 		this.$el = el
 		this.$proptoken = propToken
+		this.$targets = Object.fromEntries(this.constructor.targets.map(key => [key, new Set()]))
 	}
 	initialized() {}
 	connected() {}

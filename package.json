@@ -26,9 +26,8 @@
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -wc",
-    "release": "rollup -c && npm publish",
-    "main.test": "jest src/index.test.js",
-    "diagnostics.test": "jest ./src/diagnostics.test.js"
+    "test": "jest src/index.test.js",
+    "release": "rollup -c && npm test && npm publish"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.26.9",
