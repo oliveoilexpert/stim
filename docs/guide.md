@@ -8,19 +8,19 @@ This guide provides a comprehensive explanation of Stim, taking you from the bas
   - [What is Stim?](#what-is-stim)
   - [The Basic Pattern](#the-basic-pattern)
 - [Getting Started](#getting-started)
-  - [Creating Your First Aspect](#creating-your-first-aspect)
-  - [Connecting Aspects to HTML](#connecting-aspects-to-html)
-  - [Registering Aspects](#registering-aspects)
+  - [Creating Your First Controller](#creating-your-first-controller)
+  - [Connecting Controllers to HTML](#connecting-controllers-to-html)
+  - [Registering Controllers](#registering-controllers)
 - [Core Features](#core-features)
-  - [Attributes](#attributes)
+  - [Props](#props)
   - [Lifecycle Methods](#lifecycle-methods)
-  - [Connected Elements](#connected-elements)
-  - [Handlers](#handlers)
-- [Aspect Relationships & Scope](#aspect-relationships--scope)
+  - [Targets](#targets)
+  - [Actions](#actions)
+- [Controller Relationships & Scope](#controller-relationships--scope)
   - [Scope and Remote Connections](#scope-and-remote-connections)
-  - [Aspect Injection](#aspect-injection)
+  - [Controller Injection](#controller-injection)
   - [Custom Events](#custom-events)
-  - [Aspect Communication Strategies](#aspect-communication-strategies)
+  - [Controller Communication Strategies](#controller-communication-strategies)
 - [Configuration Options](#configuration-options)
 - [Stim Syntax Cheat Sheet](#stim-syntax-cheat-sheet)
 
@@ -37,22 +37,22 @@ When dynamically updating the DOM via AJAX or libraries like HTMX and Turbo, you
 
 Stim follows a simple pattern:
 
-1. You create **Aspects** (JavaScript classes)
-2. You declare which **HTML elements** use those aspects by adding `data-connect` attributes
-3. Stim looks for these attributes on existing and dynamically added elements and instantiates the corresponding aspects
+1. You create **Controllers** (JavaScript classes)
+2. You declare which **HTML elements** use those controllers by adding `data-controller` attributes
+3. Stim looks for these attributes on existing and dynamically added elements and instantiates the corresponding controllers
 
 ## Getting Started
 
-### Creating Your First Aspect
+### Creating Your First Controller
 
-An aspect is a JavaScript class that adds behavior to an HTML element. Let's create a simple dropdown aspect:
+A controller is a JavaScript class that adds behavior to an HTML element. Let's create a simple dropdown controller:
 
 ```javascript
-import { Aspect } from '@oliveoilexpert/stim';
+import { Controller } from '@oliveoilexpert/stim';
 
-export default class Dropdown extends Aspect {
+export default class Dropdown extends Controller {
   // Properties that sync with HTML attributes
-  static attributes = {
+  static props = {
     open: false
   };
   
@@ -64,16 +64,16 @@ export default class Dropdown extends Aspect {
 }
 ```
 
-This simple aspect defines:
-- An `open` attribute that defaults to `false`
+This simple controller defines:
+- An `open` prop that defaults to `false`
 - A `toggle()` method that flips the `open` state
 
-### Connecting Aspects to HTML
+### Connecting Controllers to HTML
 
-To use an aspect, you connect it to an HTML element using the `data-connect` attribute:
+To use a controller, you connect it to an HTML element using the `data-controller` attribute:
 
 ```html
-<div data-connect="dropdown" data-dropdown.open="true">
+<div data-controller="dropdown" data-dropdown.open="true">
   <button>Toggle Menu</button>
   <ul>
     <li>Item 1</li>
@@ -83,68 +83,68 @@ To use an aspect, you connect it to an HTML element using the `data-connect` att
 ```
 
 Here's what this HTML does:
-- `data-connect="dropdown"` connects the `Dropdown` aspect to the `div`
-- `data-dropdown.open="true"` changes the initial value of the `open` attribute
+- `data-controller="dropdown"` connects the `Dropdown` controller to the `div`
+- `data-dropdown.open="true"` changes the initial value of the `open` prop
 
-> **📝 Naming Convention**: HTML attributes for aspects use the format `data-[aspect-token].[attribute-name]`. The attribute name in HTML uses kebab-case (like `my-attribute`) to match the camelCase JavaScript property (like `myAttribute`).
+> **📝 Naming Convention**: HTML attributes for controllers use the format `data-[controller-identifier].[prop-name]`. The prop name in HTML uses kebab-case (like `my-attribute`) to match the camelCase JavaScript property (like `myAttribute`).
 
-One Element can use multiple aspects:
+One Element can use multiple controllers:
 
 ```html
-<div data-connect="dropdown list-filter">
-  <!-- This element uses both the dropdown and list-filter aspects -->
+<div data-controller="dropdown list-filter">
+  <!-- This element uses both the dropdown and list-filter controllers -->
 </div>
 ```
 
 
-### Registering Aspects
+### Registering Controllers
 
-Before Stim can use your aspects, you need to register them:
+Before Stim can use your controllers, you need to register them:
 
 ```javascript
 import { stim } from '@oliveoilexpert/stim';
 import Dropdown from './dropdown';
 
-// Register the dropdown aspect
-stim.registerAspect('dropdown', Dropdown);
+// Register the dropdown controller
+stim.registerController('dropdown', Dropdown);
 
-// Start Stim (connect aspects to the DOM)
+// Start Stim (connect controllers to the DOM)
 stim.connect();
 ```
 
-You can also register multiple aspects at once:
+You can also register multiple controllers at once:
 
 ```javascript
-// Register multiple aspects with an object
-stim.registerAspect({
+// Register multiple controllers with an object
+stim.registerController({
   'dropdown': Dropdown,
   'list-filter': ListFilter
 });
 
-// Even shorter (token will be kebab-cased automatically)
-stim.registerAspect({
+// Even shorter (key will be kebab-cased automatically)
+stim.registerController({
    Dropdown,  // becomes 'dropdown'
    ListFilter // becomes 'list-filter'
 });
 ```
 
-> **📝 Naming Convention**: The aspect token (the string used to identify the aspect in HTML) is always kebab-case. When registering using the shorthand object notation, Stim will automatically convert class names to kebab-case.
+> **📝 Naming Convention**: The controller token (the string used to identify the controller in HTML) is always kebab-case. When registering using the shorthand object notation, Stim will automatically convert class names to kebab-case.
 
-Now our dropdown aspect is registered, but it doesn't actually do anything with the open state yet. Let's expand it to make it functional.
+Now our dropdown controller is registered, but it doesn't actually do anything with the open state yet. Let's expand it to make it functional.
 
 ## Core Features
 
-### Attributes
+### Props
 
-Attributes are properties that synchronize between your JavaScript and HTML. They serve as both state and configuration for your aspects.
+Props are properties that synchronize between your JavaScript and HTML. They serve as both state and configuration for your controllers.
 
-> **🧠 Mental Model**: Think of attributes as 
+> **🧠 Mental Model**: Think of props as
 > reactive properties that automatically stay in sync between your JavaScript code and the HTML DOM.
 
-In our Dropdown example, we have an `open` attribute:
+In our Dropdown example, we have an `open` prop:
 
 ```javascript
-static attributes = {
+static props = {
   open: false,           // Boolean with default false
 };
 ```
@@ -172,27 +172,27 @@ Stim automatically converts attribute values to the appropriate JavaScript type 
 
 ```html
 <!-- Type conversion examples -->
-<div data-connect="my-aspect"
-     data-my-aspect.count="42"           <!-- Becomes number 42 -->
-     data-my-aspect.active="true"        <!-- Becomes boolean true -->
-     data-my-aspect.tags='["a","b","c"]' <!-- Becomes array ["a", "b", "c"] -->
-     data-my-aspect.config='{"key":"value"}' <!-- Becomes object {key: "value"} -->
+<div data-controller="my-controller"
+     data-my-controller.count="42"           <!-- Becomes number 42 -->
+     data-my-controller.active="true"        <!-- Becomes boolean true -->
+     data-my-controller.tags='["a","b","c"]' <!-- Becomes array ["a", "b", "c"] -->
+     data-my-controller.config='{"key":"value"}' <!-- Becomes object {key: "value"} -->
 </div>
 ```
 
 For booleans, any value that is not exactly the string "false" or "0" is considered `true`.
 
-When a property value equals its default value from `static attributes`, the HTML attribute is removed from the element.
+When a property value equals its default value from `static props`, the HTML attribute is removed from the element.
 
-#### Attribute Callbacks
+#### Prop Callbacks
 
-You can define methods that are called when attributes change:
+You can define methods that are called when props change:
 
 ```javascript
-// This is called when the 'open' attribute changes
-openChanged(oldValue, newValue) {
+// This is called when the 'open' prop changes
+openPropChanged(oldValue, newValue) {
   if (newValue) {
-    // this.element is the host element, i.e. the element with data-connect
+    // this.element is the host element, i.e. the element with data-controller
     this.element.classList.add('is-open');
   } else {
     this.element.classList.remove('is-open');
@@ -200,12 +200,12 @@ openChanged(oldValue, newValue) {
 }
 ```
 
-The callback name follows the pattern `[attributeName]Changed`. It receives the old and new values as arguments.
+The callback name follows the pattern `[propName]PropChanged`. It receives the old and new values as arguments.
 
-For non-aspect attributes (HTML attributes not defined in your `static attributes`), you can use the general `attributeChanged` callback:
+For non-controller attributes (HTML attributes not defined in your `static props`), you can use the general `attributeChanged` callback:
 
 ```javascript
-// Called when any non-aspect attribute changes
+// Called when any non-controller attribute changes
 attributeChanged(name, oldValue, newValue) {
   if (name === 'class') {
     // React to class changes
@@ -213,13 +213,13 @@ attributeChanged(name, oldValue, newValue) {
 }
 ```
 
-#### Bulk Setting Attributes
+#### Bulk Setting Props
 
-Set multiple attributes at once using JSON:
+Set multiple props at once using JSON:
 
 ```html
-<!-- Bulk attribute setting -->
-<div data-connect="dropdown" 
+<!-- Bulk prop setting -->
+<div data-controller="dropdown" 
      data-dropdown='{"open": true, "animationDuration": 500}'>
 </div>
 ```
@@ -227,8 +227,8 @@ Set multiple attributes at once using JSON:
 This is equivalent to:
 
 ```html
-<!-- Individual attribute setting -->
-<div data-connect="dropdown" 
+<!-- Individual prop setting -->
+<div data-controller="dropdown" 
      data-dropdown.open="true"
      data-dropdown.animation-duration="500">
 </div>
@@ -238,10 +238,10 @@ The bulk attribute is processed and then replaced with individual equivalents. I
 
 ### Lifecycle Methods
 
-Aspects have lifecycle methods that are called at specific moments:
+Controllers have lifecycle methods that are called at specific moments:
 
 ```javascript
-// Called when the aspect is instantiated
+// Called when the controller is instantiated
 initialized() {
   console.log('Dropdown initialized');
 }
@@ -257,32 +257,32 @@ disconnected() {
 }
 ```
 
-These lifecycle methods help you properly set up and clean up your aspects.
+These lifecycle methods help you properly set up and clean up your controllers.
 
 #### Lifecycle Sequence
 
-When an element with a `data-connect` attribute is found in the DOM, Stim follows this sequence:
+When an element with a `data-controller` attribute is found in the DOM, Stim follows this sequence:
 
-1. Any injected aspects are instantiated first (we'll cover this later)
-2. The aspect class is instantiated with the element as context
-3. Default attribute values from `static attributes` are applied
-4. Attributes from HTML are parsed and applied to the instance
+1. Any injected controllers are instantiated first (we'll cover this later)
+2. The controller class is instantiated with the element as context
+3. Default prop values from `static props` are applied
+4. Props from HTML are parsed and applied to the instance
 5. The `initialized()` method is called
 6. The `connected()` method is called
-7. Connected elements are processed (we'll cover this next)
+7. Targets are processed (we'll cover this next)
 
-> **⚠️ Important**: The `initialized()` method is called before the aspect is connected to the DOM. This makes it ideal for operations that might cause DOM changes, like moving the element to a different parent. Doing such operations in `connected()` would trigger an additional disconnect/reconnect cycle.
+> **⚠️ Important**: The `initialized()` method is called before the controller is connected to the DOM. This makes it ideal for operations that might cause DOM changes, like moving the element to a different parent. Doing such operations in `connected()` would trigger an additional disconnect/reconnect cycle.
 
 #### Handling DOM Changes
 
-When an element is removed from the DOM and then added back, the aspect instance is preserved. The lifecycle flow is:
+When an element is removed from the DOM and then added back, the controller instance is preserved. The lifecycle flow is:
 
 1. Element is removed → `disconnected()` is called
 2. Element is added back → `connected()` is called again
 
 #### Cleaning Up Resources
 
-It's essential to clean up any resources your aspect creates, particularly:
+It's essential to clean up any resources your controller creates, particularly:
 
 - Event listeners added to `document`, `window`, or any element outside your host element
 - Timers created with `setTimeout` or `setInterval`
@@ -299,32 +299,31 @@ disconnected() {
 }
 ```
 
-### Connected Elements
+### Targets
 
-While we could use `querySelector` to find elements related to our aspect, Stim provides a better way: connected elements.
+While we could use `querySelector` to find elements related to our controller, Stim provides a better way: targets.
 
-> **🧠 Mental Model**: Think of connected elements as named references to important parts of your UI. Instead of using `querySelector`, you're explicitly connecting elements to your aspect.
+> **🧠 Mental Model**: Think of targets as named references to important parts of your UI. Instead of using `querySelector`, you're explicitly connecting elements to your controller.
 
-First, define the types of elements your aspect needs:
+First, define the types of elements your controller needs:
 
 ```javascript
-export default class Dropdown extends Aspect {
-  static attributes = {
+export default class Dropdown extends Controller {
+  static props = {
     open: false
   };
   
-  // Define the types of elements we want to connect
-  // Note: Element types must use kebab-case
-  static elements = ['toggle-button', 'menu'];
+  // Define the types of elements we want to target
+  static targets = ['toggleButton', 'menu'];
 }
 ```
 
 Then, connect those elements in HTML:
 
 ```html
-<div data-connect="dropdown">
-  <button data-connect="dropdown.toggle-button">Toggle</button>
-  <ul data-connect="dropdown.menu">
+<div data-controller="dropdown">
+  <button data-target="dropdown.toggleButton">Toggle</button>
+  <ul data-target="dropdown.menu">
     <li>Item 1</li>
     <li>Item 2</li>
   </ul>
@@ -333,34 +332,32 @@ Then, connect those elements in HTML:
 
 Now you can access those elements through properties:
 
-- `this.toggleButtonElements` - A set containing all connected toggle-button elements
-- `this.toggleButtonElement` - The first toggle-button element (convenience accessor)
+- `this.toggleButtonTargets` - A set containing all targeted toggleButton elements
+- `this.toggleButtonTarget` - The first toggleButton element (convenience accessor)
 
-> **📝 Naming Convention**: Element types in `static elements` must use kebab-case (like `toggle-button`), but they become camelCase properties in JavaScript (like `toggleButtonElement`).
-
-You can also define callbacks for when elements are connected or disconnected:
+You can also define callbacks for when targets are connected or disconnected:
 
 ```javascript
-static elements = ['toggle-button', 'menu'];
+static targets = ['toggleButton', 'menu'];
 
-// Called when a toggle-button element is connected
-toggleButtonElementConnected(button) {
+// Called when a toggleButton target is connected
+toggleButtonTargetConnected(button) {
   button.addEventListener('click', () => this.toggle());
 }
 
-toggleButtonElementDisconnected(button) {
+toggleButtonTargetDisconnected(button) {
   // do stuff when the button is disconnected
 }
 
-// Called when a dropdown-menu element is connected
-menuElementConnected(menu) {
+// Called when a dropdown-menu target is connected
+menuTargetConnected(menu) {
   menu.hidden = !this.open;
 }
 
-// Called when the open attribute changes
-openChanged(oldValue, newValue) {
-  if (this.menuElement) {
-    this.menuElement.hidden = !newValue;
+// Called when the open prop changes
+openPropChanged(oldValue, newValue) {
+  if (this.menuTarget) {
+    this.menuTarget.hidden = !newValue;
   }
 }
 
@@ -370,71 +367,71 @@ toggle() {
 
 ```
 
-> **⚠️ Important**: Connected elements are processed *after* the `connected()` lifecycle method. Don't try to access element collections like `this.toggleButtonElements` in your `connected()` method. Use the element-specific callbacks instead.
+> **⚠️ Important**: Targets are processed *after* the `connected()` lifecycle method. Don't try to access target collections like `this.toggleButtonTargets` in your `connected()` method. Use the target-specific callbacks instead.
 
 #### Multiple Connections on One Element
 
 One element can have multiple connections:
 
 ```html
-<div data-connect="fancy-button dropdown.toggle-button select.option">
-  <!-- This element hosts the fancy-button aspect while connected 
-       in multiple roles to other aspects -->
+<div data-controller="fancy-button" data-target="dropdown.toggleButton select.option">
+  <!-- This element hosts the fancy-button controller while targeted 
+       in multiple roles to other controllers -->
 </div>
 ```
 
 In the example above, the div:
-1. Hosts the `fancy-button` aspect
-2. Is connected as a `toggle-button` to a `dropdown` aspect
-3. Is connected as an `option` to a `select` aspect
+1. Hosts the `fancy-button` controller
+2. Is targeted as a `toggleButton` to a `dropdown` controller
+3. Is targeted as an `option` to a `select` controller
 
 #### Dynamic Elements
 
-Connected elements work with dynamic content. If elements are added or removed after the aspect is connected, the appropriate callbacks are called automatically:
+Targets work with dynamic content. If elements are added or removed after the controller is connected, the appropriate callbacks are called automatically:
 
 ```javascript
-// Dynamically adding a connected element
+// Dynamically adding a target
 addMenuItem(text) {
   const item = document.createElement('li');
   item.textContent = text;
   
-  // Connect it as a menu-item
-  item.dataset.connect = 'dropdown.menu-item';
+  // Target it as a menu-item
+  item.dataset.target = 'dropdown.menuItem';
   
   // Add it to the menu
-  this.menuElement.appendChild(item);
+  this.menuTarget.appendChild(item);
   
-  // menuItemElementConnected will be called automatically
+  // menuItemTargetConnected will be called automatically
 }
 ```
 
-### Handlers
+### Actions
 
-While we can add event listeners in the element callbacks, Stim provides a more declarative way: handlers.
+While we can add event listeners in the target callbacks, Stim provides a more declarative way: actions.
 
-> **🧠 Mental Model**: Handlers are like event listeners declared in HTML. Instead of adding listeners in JavaScript, you specify them directly in your markup.
+> **🧠 Mental Model**: Actions are like event listeners declared in HTML. Instead of adding listeners in JavaScript, you specify them directly in your markup.
 
-Basic handler syntax:
+Basic action syntax:
 
 ```html
-<button data-handler="click->dropdown.toggle">Toggle Menu</button>
+<button data-action="click->dropdown.toggle">Toggle Menu</button>
 ```
 
-This tells Stim: "When this button is clicked, call the `toggle` method on the `dropdown` aspect."
+This tells Stim: "When this button is clicked, call the `toggle` method on the `dropdown` controller."
 
 For commonly used events, you can omit the event name:
 
 ```html
 <!-- This also calls dropdown.toggle on click (default event for buttons) -->
-<button data-handler="dropdown.toggle">Toggle Menu</button>
+<button data-action="dropdown.toggle">Toggle Menu</button>
 ```
 
-Let's update our dropdown example to use handlers:
+Let's update our dropdown example to use actions:
 
 ```html
-<div data-connect="dropdown">
-  <button data-handler="dropdown.toggle">Toggle Menu</button>
-  <ul data-connect="dropdown.menu">
+<div data-controller="dropdown">
+  <button data-action="dropdown.toggle">Toggle Menu</button>
+  <ul data-target="dropdown.menu">
     <li>Item 1</li>
     <li>Item 2</li>
   </ul>
@@ -442,20 +439,20 @@ Let's update our dropdown example to use handlers:
 ```
 
 ```javascript
-export default class Dropdown extends Aspect {
-  static attributes = {
+export default class Dropdown extends Controller {
+  static props = {
     open: false
   };
   
-  static elements = ['menu'];
+  static targets = ['menu'];
   
-  menuElementConnected(menu) {
+  menuTargetConnected(menu) {
     menu.hidden = !this.open;
   }
   
-  openChanged(oldValue, newValue) {
-    if (this.menuElement) {
-      this.menuElement.hidden = !newValue;
+  openPropChanged(oldValue, newValue) {
+    if (this.menuTarget) {
+      this.menuTarget.hidden = !newValue;
     }
   }
   
@@ -465,7 +462,7 @@ export default class Dropdown extends Aspect {
 }
 ```
 
-We've removed the need for the `toggleButtonElementConnected` method since we're using a handler instead.
+We've removed the need for the `toggleButtonTargetConnected` method since we're using an action instead.
 
 #### Default Events
 
@@ -483,7 +480,7 @@ Different elements have different default events:
 You can specify options for the event listener:
 
 ```html
-<button data-handler="click[once prevent]->dropdown.toggle">
+<button data-action="click[once prevent]->dropdown.toggle">
   Toggle Menu (once)
 </button>
 ```
@@ -497,16 +494,18 @@ Available options:
 
 Adding `!` before an option negates it (e.g., `[!passive]`).
 
-#### Passing Parameters to Handlers
+#### Passing Parameters to Actions
 
-You can pass parameters to handler methods:
+You can pass parameters to action methods:
 
 ```html
-<button data-handler="dropdown.toggle" 
+<button data-action="dropdown.toggle"
         data-dropdown.toggle.force="true">
   Force Open
 </button>
 ```
+
+
 
 ```javascript
 toggle({force} = {}, event) {
@@ -518,70 +517,70 @@ toggle({force} = {}, event) {
 }
 ```
 
-The handler method receives:
+The action method receives:
 1. An object containing the parameters
 2. The original DOM event
 
 You can also set parameters in bulk using JSON:
 
 ```html
-<button data-handler="dropdown.toggle" 
+<button data-action="dropdown.toggle" 
         data-dropdown.toggle='{"force": true, "animate": false}'>
   Force Open
 </button>
 ```
 
-#### Multiple Handlers on One Element
+#### Multiple Actions on One Element
 
-One element can have multiple handlers:
+One element can have multiple actions:
 
 ```html
-<button data-handler="dropdown.toggle analytics.track-click">
+<button data-action="dropdown.toggle analytics.trackClick">
   Multi-action Button
 </button>
 ```
 
-This will call both the `toggle` method on the `dropdown` aspect and the `trackClick` method on the `analytics` aspect when the button is clicked.
+This will call both the `toggle` method on the `dropdown` controller and the `trackClick` method on the `analytics` controller when the button is clicked.
 
-## Aspect Relationships & Scope
+## Controller Relationships & Scope
 
 ### Scope and Remote Connections
 
-By default, Stim only looks for connected elements and handlers within their host element's DOM subtree, creating a scope boundary.
+By default, Stim only looks for targets and actions within their host element's DOM subtree, creating a scope boundary.
 
 #### Default Scope Boundaries
 
-Each aspect has a default scope limited to its host element's descendants:
+Each controller has a default scope limited to its host element's descendants:
 
 ```html
 <!-- Default scope: Everything within this div -->
-<div data-connect="dropdown">
+<div data-controller="dropdown">
   <!-- These are in scope for dropdown -->
-  <button data-handler="dropdown.toggle">Toggle</button>
-  <ul data-connect="dropdown.menu">...</ul>
+  <button data-action="dropdown.toggle">Toggle</button>
+  <ul data-target="dropdown.menu">...</ul>
 </div>
 ```
 
 Elements outside this scope are not automatically accessible:
 
 ```html
-<!-- NOT in scope for dropdown, will not connect to aspect -->
-<button data-handler="dropdown.toggle">Outside Toggle</button>
-<ul data-connect="dropdown.menu">...</ul>
+<!-- NOT in scope for dropdown, will not connect to controller -->
+<button data-action="dropdown.toggle">Outside Toggle</button>
+<ul data-target="dropdown.menu">...</ul>
 
-<div data-connect="dropdown">
+<div data-controller="dropdown">
   <!-- Content -->
 </div>
 ```
 
-When nesting aspects, each creates its own scope boundary:
+When nesting controllers, each creates its own scope boundary:
 
 ```html
-<div data-connect="dropdown">
-  <div data-connect="list-filter">
+<div data-controller="dropdown">
+  <div data-controller="list-filter">
     <!-- NOT in scope for dropdown -->
-    <button data-handler="dropdown.toggle">Inner Toggle</button>
-    <ul data-connect="dropdown.menu">...</ul>
+    <button data-action="dropdown.toggle">Inner Toggle</button>
+    <ul data-target="dropdown.menu">...</ul>
   </div>
 </div>
 ```
@@ -592,101 +591,91 @@ To connect elements across scope boundaries, use element IDs:
 
 ```html
 <!-- Remote connection using ID -->
-<button data-connect="modal.toggle-button#login-modal">Show Login</button>
+<button data-target="modal.toggleButton#login-modal">Show Login</button>
 
 <!-- Target element with matching ID -->
-<div id="login-modal" data-connect="modal">...</div>
+<div id="login-modal" data-controller="modal">...</div>
 ```
 
-Remote connections also work for handler elements:
+Remote connections also work for action elements:
 
 ```html
 <!-- Remote connection using ID -->
-<button data-handler="modal.show#login-modal">Show Login</button>
+<button data-action="modal.show#login-modal">Show Login</button>
 
 <!-- Target element with matching ID -->
-<div id="login-modal" data-connect="modal">...</div>
+<div id="login-modal" data-controller="modal">...</div>
 ```
 
-### Aspect Injection
+### Controller Injection
 
-Aspect injection lets one aspect use another aspect's functionality. This encourages composition over inheritance.
+Controller injection lets one controller use another controller's functionality. This encourages composition over inheritance.
 
-> **🧠 Mental Model**: Think of aspect injection as a way to say "my aspect needs the functionality of these other aspects" without having to extend them.
+> **🧠 Mental Model**: Think of controller injection as a way to say "my controller needs the functionality of these other controllers" without having to extend them.
 
 ```javascript
-export default class Select extends Aspect {
-  // Inject the dropdown and form-field aspects
-  // Note: Aspect tokens must use kebab-case
-  static aspects = ['dropdown', 'form-field'];
+export default class Select extends Controller {
+  // Inject the dropdown and form-field controllers
+  // Note: Controller identifiers must use kebab-case
+  static injects = {
+    'form-field': {},
+    'dropdown': {
+       closeOnClick: true,
+    }
+  }
   
-  static elements = ['option']
+  static targets = ['option']
   
-  optionElementConnected(option) {
+  optionTargetConnected(option) {
     option.addEventListener('click', (event) => {
-      // access injected aspects directly
-      this.formFieldAspect.value = option.value;
-      this.dropdownAspect.toggle({}, event);
+      // access injected controllers directly
+      this.formFieldInject.value = option.value;
+      this.dropdownInject.toggle({}, event);
     });
   }
 }
 ```
 
-> **📝 Naming Convention**: Aspect tokens in `static aspects` must use kebab-case (like `form-field`), but they become camelCase properties in JavaScript (like `formFieldAspect`).
 
-> **⚠️ Important**: Directly calling lifecycle methods of injected aspects is *not* recommended, as they are only callbacks for the aspect's lifecycle managed by Stim. Calling them will *not* trigger the lifecycle itself.
+> **📝 Naming Convention**: Controller tokens in `static injects` must use kebab-case (like `form-field`), but they become camelCase properties in JavaScript (like `formFieldInject`).
 
-When a `Select` aspect is instantiated, Stim will:
-1. Create a `Dropdown` aspect on the same element
-2. Create a `FormField` aspect on the same element
-3. Make them available as `this.dropdownAspect` and `this.formFieldAspect`
+With the values of the `injects` property you can override the default values of the injected controllers' `static props`.
+
+> **⚠️ Important**: Directly calling lifecycle methods of injected controllers is *not* recommended, as they are only callbacks for the controller's lifecycle managed by Stim. Calling them will *not* trigger the lifecycle itself.
+
+When a `Select` controller is instantiated, Stim will:
+1. Create a `Dropdown` controller on the same element
+2. Create a `FormField` controller on the same element
+3. Make them available as `this.dropdownInject` and `this.formFieldInject`
 
 This is powerful for building complex components from smaller, reusable parts.
 
-#### Injected Aspects in HTML
+#### Injected Controllers in HTML
 
-Injected aspects' attributes, connected elements and handlers are set up just like they are for "normal" aspects:
+Injected controllers' props, targets and actions are set up just like they are for "normal" controllers:
 
 ```html
-<!-- Select aspect with injected dropdown and form-field aspects -->
-<!-- data-form-field.validation and data-dropdown set attributes on the injected aspects -->
-<div data-connect="select" 
+<!-- Select controller with injected dropdown and form-field controllers -->
+<!-- data-form-field.validation and data-dropdown set props on the injected controllers -->
+<div data-controller="select" 
      data-form-field.validation="..." 
      data-dropdown='{ "open": true }'>
-  <!-- data-connect="form-field.input" declares a connected element of the injected form-field aspect -->
-  <input data-connect="form-field.input" type="hidden"/>
-  <!-- data-handler="dropdown.toggle" declares a handler of the injected dropdown aspect -->
-  <button data-handler="dropdown.toggle">Open Options</button>
-  <ul data-connect="dropdown.menu">
-    <li data-connect="select.option" value="1">Option 1</li>
-    <li data-connect="select.option" value="2">Option 2</li>
+  <!-- data-target="form-field.input" declares a target of the injected form-field controller -->
+  <input data-target="form-field.input" type="hidden"/>
+  <!-- data-action="dropdown.toggle" declares an action of the injected dropdown controller -->
+  <button data-action="dropdown.toggle">Open Options</button>
+  <ul data-target="dropdown.menu">
+    <li data-target="select.option" value="1">Option 1</li>
+    <li data-target="select.option" value="2">Option 2</li>
   </ul>
 ```
 
-
-#### Configuring Injected Aspects
-
-You can configure injected aspects by using an object instead of an array:
-
-```javascript
-static aspects = {
-  'dropdown': {
-    open: true,
-  },
-  'form-field': {
-    validation: { ... },  
-  }
-};
-```
-
-These values override the default values from the injected aspects' `static attributes`.
-
 ### Custom Events
 
-Aspects can communicate with each other and with the wider application by dispatching custom events:
+Controllers can communicate with each other and with the wider application by dispatching custom events:
 
 ```javascript
-valueChanged(oldValue, newValue) {
+valuePropChanged(oldValue, newValue) {
   // Notify interested parties about the change
   this.dispatch('change', {
     detail: { oldValue, newValue },
@@ -695,7 +684,7 @@ valueChanged(oldValue, newValue) {
 }
 ```
 
-Listen for these events in other aspects or plain JavaScript:
+Listen for these events in other controllers or plain JavaScript:
 
 ```javascript
 document.addEventListener('select:change', (event) => {
@@ -710,7 +699,7 @@ this.dispatch(
   eventType, // The event name suffix - e.g., "change"
   {
     target: this.element, // The target element, default is the host element
-    prefix: this.token,   // Event name prefix, default is the aspect-token
+    prefix: this.identifier,   // Event name prefix, default is the controller-identifier
     detail: {},           // Event data
     bubbles: false,       // Whether the event bubbles
     cancelable: false,    // Whether the event can be canceled
@@ -719,25 +708,25 @@ this.dispatch(
 );
 ```
 
-### Aspect Communication Strategies
+### Controller Communication Strategies
 
-Aspects often need to communicate with each other in complex applications. Stim provides several patterns for this communication, each suited to different situations.
+Controllers often need to communicate with each other in complex applications. Stim provides several patterns for this communication, each suited to different situations.
 
 #### Choosing the Right Communication Strategy
 
 | Strategy | Best For | 
 |----------|----------|
 | **Custom Events** | Loosely coupled components, application-wide notifications | 
-| **Connected Elements** | Parent-child or sibling relationships with direct references | 
+| **Targets** | Parent-child or sibling relationships with direct references | 
 | **Stim References** | Global services, singletons | 
-| **Aspect Injection** | Composing functionality on the same element | 
+| **Controller Injection** | Composing functionality on the same element | 
 
 #### 1. Custom Events
 
-Custom events enable loose coupling between aspects through a publish-subscribe pattern:
+Custom events enable loose coupling between controllers through a publish-subscribe pattern:
 
 ```javascript
-export default class ProductConfigurator extends Aspect {
+export default class ProductConfigurator extends Controller {
   // Dispatch a custom event when a product is created
   productCreated(product) {
     this.dispatch('created', {
@@ -747,7 +736,7 @@ export default class ProductConfigurator extends Aspect {
   }
 }
 
-export default class Cart extends Aspect {
+export default class Cart extends Controller {
   // Listen for the custom event
   connected() {
     document.addEventListener('product-configurator:created', this.handleProductCreation);
@@ -764,29 +753,29 @@ export default class Cart extends Aspect {
 
 **Best for**: Application-wide notifications, unrelated components that need to react to the same events
 
-#### 2. Connected Elements
+#### 2. Targets
 
-Directly reference other aspects through DOM connections:
+Directly reference other controllers through DOM connections:
 
 ```html
-<div data-connect="parent-component">
-  <!-- Parent connects to a child component -->
-  <div data-connect="child-component parent-component.child">
+<div data-controller="parent-component">
+  <!-- Parent targets a child component -->
+  <div data-controller="child-component" data-target="parent-component.child">
     <!-- Child component content -->
   </div>
 </div>
 ```
 
 ```javascript
-export default class ParentComponent extends Aspect {
-  static elements = ['child'];
+export default class ParentComponent extends Controller {
+  static targets = ['child'];
   
-  childElementConnected(child) {
-    // Get the child-component aspect instance
-    const childAspect = this.stim.getAspect(child, 'child-component');
-    if (childAspect) {
-      // Do something with the child aspect
-      childAspect.doSomething();
+  childTargetConnected(child) {
+    // Get the child-component controller instance
+    const childController = this.stim.getController(child, 'child-component');
+    if (childController) {
+      // Do something with the child controller
+      childController.doSomething();
     }
   }
 }
@@ -796,29 +785,29 @@ export default class ParentComponent extends Aspect {
 
 #### 3. Stim References
 
-Register aspects as global services accessible from anywhere:
+Register controllers as global services accessible from anywhere:
 
 ```javascript
-export default class Cart extends Aspect {
+export default class Cart extends Controller {
   // Register the cart as a global reference during initialization
   connected() {
-    this.stim.refs.set('cartAspect', this);
+    this.stim.refs.set('cartController', this);
   }
   // Clean up when disconnected
   disconnected() {
-    this.stim.refs.delete('cartAspect');
+    this.stim.refs.delete('cartController');
   }
   addProduct(product) {
     // Add the product to the cart
   }
 }
 
-export default class ProductConfigurator extends Aspect {
+export default class ProductConfigurator extends Controller {
   // Access the cart through the global reference
   productCreated(product) {
-    const cartAspect = this.stim.refs.get('cartAspect');
-    if (cartAspect) {
-      cartAspect.addProduct(product);
+    const cartController = this.stim.refs.get('cartController');
+    if (cartController) {
+      cartController.addProduct(product);
     }
   }
 }
@@ -826,41 +815,44 @@ export default class ProductConfigurator extends Aspect {
 
 **Best for**: Global services like cart, authentication, or analytics
 
-#### 4. Aspect Injection
+#### 4. Controller Injection
 
-Use aspect injection for composition and communication between aspects on the same element:
+Use controller injection for composition and communication between controllers on the same element:
 
 ```javascript
-export default class ComboBox extends Aspect {
-  static elements = ['option']
-  static aspects = ['dropdown', 'form-field'];
+export default class ComboBox extends Controller {
+  static targets = ['option']
+  static injects = {
+    'dropdown': {},
+    'form-field': {}
+  }
 
   connected() {
-    // Access injected aspects directly
-    if (this.formFieldAspect.value) {
-      this.dropdownAspect.label = this.formFieldAspect.value;
+    // Access injected controllers directly
+    if (this.formFieldInject.value) {
+      this.dropdownInject.label = this.formFieldInject.value;
     }
 	 
-    // also possible: hook into injected aspects' callback methods
-    formFieldAspect.valueChanged = (oldValue, newValue) => {
-      // if defined, call the original valueChanged method
-      Object.getPrototypeOf(formFieldAspect).valueChanged?.call(formFieldAspect, oldValue, newValue);
+    // also possible: hook into injected controllers' callback methods
+    formFieldInject.valuePropChanged = (oldValue, newValue) => {
+      // if defined, call the original valuePropChanged method
+      Object.getPrototypeOf(formFieldInject).valuePropChanged?.call(formFieldInject, oldValue, newValue);
       // additional logic
-      this.dropdownAspect.label = newValue;
+      this.dropdownInject.label = newValue;
     };
   }
   
 
-  optionElementConnected(option) {
+  optionTargetConnected(option) {
     option.addEventListener('click', (event) => {
-      this.formFieldAspect.value = option.value;
-      this.dropdownAspect.toggle({}, event);
+      this.formFieldInject.value = option.value;
+      this.dropdownInject.toggle({}, event);
     });
   }
 }
 ```
 
-**Best for**: Composing functionality from multiple aspects on the same element
+**Best for**: Composing functionality from multiple controllers on the same element
 
 ## Configuration Options
 
@@ -881,7 +873,7 @@ stim.connect();
 
 * ##### `observeChildList`
   Default: `true`  
-  Whether to observe the document body for new elements with `connect` and `handler` attributes and connect them.
+  Whether to observe the document body for new elements with `controller`, `target` and `action` attributes and connect them.
 
   ```javascript
   // Disable automatic observation for performance
@@ -889,138 +881,100 @@ stim.connect();
   ```
 
   Disabling this is useful if you want to optimize performance, but you'll have to manually connect dynamically added elements.
-  
-  Nodes can be connected/disconnected manually by calling `stim.connectNode(node)` and `stim.disconnectNode(node)` respectively.
+
+  Nodes can be connected/disconnected manually by calling `stim.connectElement(element)` and `stim.disconnectElement(element)` respectively.
 
 * ##### `observeAttributes`
 
   Default: `true`  
-  Whether to observe the document body for changes to the `connect` and `handler` attributes on elements.
-  
+  Whether to observe the document body for changes to the `controller`, `target` and `action` attributes on elements.
+
   ```javascript
   // Disable attribute observation
   stim.config.observeAttributes = false;
   ```
-  
-  Disabling this is useful if you want to optimize performance and are not expecting the `connect` and `handler` attributes to change once elements have been added to the DOM.
 
-* ##### `observeAspectAttributes`
+  Disabling this is useful if you want to optimize performance and are not expecting these attributes to change once elements have been added to the DOM.
+
+* ##### `observeControllerAttributes`
 
   Default: `true`  
-  Whether to observe attribute changes on aspect elements.
-  
+  Whether to observe attribute changes on controller elements.
+
   ```javascript
-  // Disable aspect attribute observation
-  stim.config.observeAspectAttributes = false;
+  // Disable controller attribute observation
+  stim.config.observeControllerAttributes = false;
   ```
 
   If disabled:
-  - Setting an aspect attribute property will still set the HTML attribute, but not vice versa
+  - Setting a controller prop property will still set the HTML attribute, but not vice versa
   - The `attributeChanged` callback will not trigger
-  - The `[attributeName]Changed` callbacks will not trigger for HTML attribute changes
-  
-  Disabling this is useful if you do not need to change aspect properties via HTML attributes.
+  - The `[propName]PropChanged` callbacks will not trigger for HTML attribute changes
+
+  Disabling this is useful if you do not need to change controller properties via HTML attributes.
 
 #### Attribute Naming
 
 * ##### `attributePrefix`
-  
+
   Default: `data-`  
   The prefix for all HTML attributes. This can be changed to avoid conflicts with other libraries or frameworks.
-  
+
   ```javascript
   // Use a different attribute prefix
   stim.config.attributePrefix = 'x-';
   ```
-  
-  With this change, you would use `x-connect` instead of `data-connect` in your HTML.
 
-* ##### `connectAttribute`
-  
-  Default: `connect`  
-  The attribute that connects elements to aspects / instantiates aspects.
-  
+  With this change, you would use `x-controller` instead of `data-controller` in your HTML.
+
+* ##### `controllerAttribute`
+
+  Default: `controller`  
+  The attribute that connects elements to controllers / instantiates controllers.
+
   ```javascript
-  // Change the connect attribute name
-  stim.config.connectAttribute = 'is';
+  // Change the controller attribute name
+  stim.config.controllerAttribute = 'uses';
   ```
-  
-  With this change, you would use `data-is` instead of `data-connect` in your HTML.
 
-* ##### `handlerAttribute`
-  
-  Default: `handler`  
+  With this change, you would use `data-uses` instead of `data-controller` in your HTML.
+
+* ##### `targetAttribute`
+
+  Default: `target`  
+  The attribute that connects elements as targets to controllers.
+
+  ```javascript
+  // Change the controller attribute name
+  stim.config.controllerAttribute = 'ref';
+  ```
+
+  With this change, you would use `data-ref` instead of `data-target` in your HTML.
+
+* ##### `actionAttribute`
+
+  Default: `action`  
   The attribute that attaches event listeners to elements.
-  
-  ```javascript
-  // Change the handler attribute name
-  stim.config.handlerAttribute = 'trigger';
-  ```
-  
-  With this change, you would use `data-trigger` instead of `data-handler` in your HTML.
 
-* ##### `scopeAttribute`
-  
-  Default: `scope`  
-  The attribute that defines the scope of an aspect (internal functionality).
-  
   ```javascript
-  // Change the scope attribute name
-  stim.config.scopeAttribute = 'context';
+  // Change the action attribute name
+  stim.config.actionAttribute = 'triggers';
   ```
 
-#### Custom Elements
+  With this change, you would use `data-triggers` instead of `data-action` in your HTML.
 
-* ##### `customElementPrefix`
-  
-  Default: `aspect-`  
-  The prefix for custom elements.
-  
-  ```javascript
-  // Change the custom element prefix
-  stim.config.customElementPrefix = 'stim-';
-  
-  // Register a custom element
-  stim.registerCustomElement('dropdown');
-  ```
-  
-  This allows you to use custom elements with your aspects:
-  
-  ```html
-  <!-- With default prefix -->
-  <aspect-dropdown>
-    <button data-connect="dropdown.toggle-button">Toggle</button>
-  </aspect-dropdown>
-  
-  <!-- With custom prefix -->
-  <stim-dropdown>
-    <button data-connect="dropdown.toggle-button">Toggle</button>
-  </stim-dropdown>
-  ```
 
 ## Stim Syntax Cheat Sheet
 
 ### HTML Attributes
 
-| Purpose | Syntax | Example                                          |
-|---------|--------|--------------------------------------------------|
-| Connect aspect to element | `data-connect="aspect-name"` | `<div data-connect="dropdown">`                  |
-| Connect multiple aspects | `data-connect="aspect1 aspect2"` | `<div data-connect="dropdown list-filter">`      |
-| Set aspect attribute | `data-[aspect-name].[attribute-name]="value"` | `<div data-dropdown.open="true">`                |
-| Set multiple attributes | `data-[aspect-name]='{"attr1": "val1", "attr2": "val2"}'` | `<div data-dropdown='{"open": true}'>`           |
-| Connect element to aspect | `data-connect="[aspect-name].[element-type]"` | `<button data-connect="dropdown.button">`        |
-| Remote element connection | `data-connect="[aspect-name].[element-type]#[id]"` | `<button data-connect="dropdown.button#menu">`   |
-| Handler with default event | `data-handler="[aspect-name].[method-name]"` | `<button data-handler="dropdown.toggle">`        |
-| Handler with specific event | `data-handler="[event]->[aspect-name].[method-name]"` | `<button data-handler="click->dropdown.toggle">` |
-| Handler parameter | `data-[aspect-name].[method-name].[param-name]="value"` | `<button data-dropdown.toggle.force="true">`     |
-
-### JavaScript API
-
-| Purpose | Syntax | Example                                       |
-|---------|--------|-----------------------------------------------|
-| Define aspect | `class Name extends Aspect` | `class Dropdown extends Aspect`               |
-| Define attributes | `static attributes = {...}` | `static attributes = { open: false }`         |
-| Define element types | `static elements = [...]` | `static elements = ['toggle-button', 'menu']` |
-| Inject aspects | `static aspects = [...]` | `static aspects = ['dropdown']`               |
-| Register aspect | `stim.registerAspect(name, Class)` | `stim.registerAspect('dropdown', Dropdown)`   |
-| Start Stim | `stim.connect()` | `stim.connect()`                              |
+| Purpose | Syntax                                                             | Example                                          |
+|---------|--------------------------------------------------------------------|--------------------------------------------------|
+| Connect controller to element | `data-controller="controller-identifier"`                          | `<div data-controller="dropdown">`                  |
+| Connect multiple controllers | `data-controller="controller1 controller2"`                        | `<div data-controller="dropdown list-filter">`      |
+| Set controller prop | `data-[controller-identifier].[prop-name]="value"`                 | `<div data-dropdown.open="true">`                |
+| Set multiple props | `data-[controller-identifier]='{"prop1": "val1", "prop2": "val2"}'` | `<div data-dropdown='{"open": true}'>`           |
+| Target element to controller | `data-target="[controller-identifier].[targetType]"`               | `<button data-target="dropdown.button">`        |
+| Remote target connection | `data-target="[controller-identifier].[targetType]#[id]"`          | `<button data-target="dropdown.button#menu">`   |
+| Action with default event | `data-action="[controller-identifier].[methodName]"`               | `<button data-action="dropdown.toggle">`        |
+| Action with specific event | `data-action="[event]->[controller-identifier].[method-name]"`     | `<button data-action="click->dropdown.toggle">` |
