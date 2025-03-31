@@ -2,7 +2,7 @@
 
 A lightweight, flexible alternative to [Stimulus](https://github.com/hotwired/stimulus) for adding JavaScript behavior to HTML.
 
-![npm bundle size](https://img.shields.io/bundlephobia/minzip/@oliveoilexpert/stim)
+![npm bundle size](https://img.shields.io/bundlephobia/minzip/@oliveoilexpert/stim@latest)
 ![npm version](https://img.shields.io/npm/v/@oliveoilexpert/stim)
 
 ## Table of Contents
@@ -76,7 +76,7 @@ Stim follows a simple pattern:
 
 #### Compared to Stimulus
 
-- **Lighter weight**: ~4kb vs ~11kb minified
+- **Lighter weight**: ~3kb vs ~11kb minified
 - **More flexible connections**: Targets/Actions can connect "remotely" to controllers via ID
 - **Dependency injection**: Controllers can inject other controllers they depend on
 - **Props bulk attribute**: Set props in bulk with JSON
