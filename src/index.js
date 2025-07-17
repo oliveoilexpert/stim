@@ -320,7 +320,12 @@ class Stim {
 				const params = JSON.parse(action.el.getAttribute(paramAttr) || '{}')
 				for (const attr of action.el.attributes) {
 					if (attr.name.startsWith(`${paramAttr}.`)) {
-						params[camelCase(attr.name.replace(`${paramAttr}.`, ''))] = JSON.parse(attr.value)
+						const key = camelCase(attr.name.replace(`${paramAttr}.`, ''))
+						try {
+							params[key] = JSON.parse(attr.value)
+						} catch {
+							params[key] = attr.value
+						}
 					}
 				}
 				controller[camelCase(action.method)]?.(params, event)

@@ -1,6 +1,6 @@
 {
   "name": "@oliveoilexpert/stim",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A modest stimulus knock-off",
   "repository": {
     "type": "git",
@@ -21,6 +21,8 @@
   "files": [
     "dist/stim.js",
     "dist/stim.umd.js",
+    "dist/stim.min.js",
+    "dist/stim.min.js.map",
     "dist/stim.d.ts"
   ],
   "scripts": {
