@@ -791,11 +791,11 @@ Register controllers as global services accessible from anywhere:
 export default class Cart extends Controller {
   // Register the cart as a global reference during initialization
   connected() {
-    this.stim.refs.set('cartController', this);
+    this.stim.store.cartController = this;
   }
   // Clean up when disconnected
   disconnected() {
-    this.stim.refs.delete('cartController');
+    this.stim.store.cartController = null;
   }
   addProduct(product) {
     // Add the product to the cart
@@ -805,7 +805,7 @@ export default class Cart extends Controller {
 export default class ProductConfigurator extends Controller {
   // Access the cart through the global reference
   productCreated(product) {
-    const cartController = this.stim.refs.get('cartController');
+    const cartController = this.stim.store.cartController;
     if (cartController) {
       cartController.addProduct(product);
     }

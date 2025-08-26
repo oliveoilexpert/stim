@@ -78,6 +78,7 @@ class PropSyncer {
 }
 
 class Stim {
+	store = {}
 	#controllerRegister = {}
 	#selectorRegister = {}
 	#injectTokens = {}

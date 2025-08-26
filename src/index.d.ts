@@ -29,6 +29,7 @@ type Config = {
     actionAttribute: string,
 }
 declare class Stim {
+    store: Record<string, any>
     get config(): Config
     get controllerRegister(): IdentifierToControllerConstructorDictionary
     get selectorRegister(): SelectorToCallbackDictionary
